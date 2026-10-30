@@ -1,7 +1,9 @@
 import { findLevel } from '../levels';
 import { Scene } from '../render/Scene';
 import { useStore } from '../store';
+import { BudgetBar } from './BudgetBar';
 import { QuoteBanner } from './QuoteBanner';
+import { Toolbar } from './Toolbar';
 
 export function GameScreen() {
   const { levelId, goTo } = useStore();
@@ -18,14 +20,14 @@ export function GameScreen() {
         </button>
         <h2>{level.title}</h2>
         <p>{level.brief}</p>
-        {Number.isFinite(level.budget) && <span className="pill">Budget ₹{level.budget.toLocaleString('en-IN')}</span>}
       </div>
 
-      <div className="hud bottom-left">
+      <div className="hud top-right">
+        <BudgetBar level={level} />
         <QuoteBanner />
       </div>
 
-      <div className="hud bottom-right blueprint hint">Drag to pan · scroll to zoom</div>
+      <Toolbar level={level} />
     </div>
   );
 }

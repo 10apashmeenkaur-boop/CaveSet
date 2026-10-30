@@ -1,7 +1,9 @@
 import { MapControls, OrthographicCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useMemo } from 'react';
+import { MOUSE } from 'three';
 import type { Level } from '../sim/types';
+import { DesignLayer, GhostLayer, InteractionPlane } from './Build';
 import { tileToWorld } from './coords';
 import { COLORS } from './palette';
 import { Person } from './Person';
@@ -15,6 +17,9 @@ const CAM_POS: [number, number, number] = [
   DIST * Math.sin(PITCH),
   DIST * Math.cos(PITCH) * Math.cos(YAW),
 ];
+
+// Left button is for building; right/middle drag pans. (-1 = no action in OrbitControls.)
+const MOUSE_BUTTONS = { LEFT: -1 as MOUSE, MIDDLE: MOUSE.PAN, RIGHT: MOUSE.PAN };
 
 function Floor({ level }: { level: Level }) {
   const { w, h } = level.grid;
@@ -55,22 +60,6 @@ function GridLines({ w, h }: { w: number; h: number }) {
   );
 }
 
-function Walls({ level }: { level: Level }) {
-  return (
-    <group>
-      {level.fixedWalls.map(([x, y]) => {
-        const [wx, , wz] = tileToWorld(level, x, y);
-        return (
-          <mesh key={`${x},${y}`} position={[wx, 0.6, wz]} castShadow receiveShadow>
-            <boxGeometry args={[1, 1.2, 1]} />
-            <meshStandardMaterial color={COLORS.wall} flatShading />
-          </mesh>
-        );
-      })}
-    </group>
-  );
-}
-
 /** Idle preview crowd so the character style is visible before agents exist (replaced in M3). */
 function PreviewPeople({ level }: { level: Level }) {
   const spots: { type: 'crate' | 'tray' | 'empty' | 'elderly'; x: number; y: number }[] = [
@@ -90,9 +79,9 @@ function PreviewPeople({ level }: { level: Level }) {
 
 export function Scene({ level }: { level: Level }) {
   return (
-    <Canvas shadows style={{ background: COLORS.background }}>
+    <Canvas shadows style={{ background: COLORS.background }} onContextMenu={(e) => e.preventDefault()}>
       <OrthographicCamera makeDefault position={CAM_POS} zoom={42} near={0.1} far={200} />
-      <MapControls enableRotate={false} screenSpacePanning minZoom={15} maxZoom={120} />
+      <MapControls enableRotate={false} screenSpacePanning minZoom={15} maxZoom={120} mouseButtons={MOUSE_BUTTONS} />
       <ambientLight intensity={0.75} />
       <directionalLight
         position={[8, 16, 6]}
@@ -105,7 +94,9 @@ export function Scene({ level }: { level: Level }) {
         shadow-camera-bottom={-15}
       />
       <Floor level={level} />
-      <Walls level={level} />
+      <DesignLayer level={level} />
+      <GhostLayer level={level} />
+      <InteractionPlane level={level} />
       <PreviewPeople level={level} />
     </Canvas>
   );

@@ -6,6 +6,11 @@ export const COLORS = {
   gridLine: '#cfc8bf',
   wall: '#c9705a',
   wallTop: '#d98a72',
+  door: '#b5835a',
+  threshold: '#c9b79c',
+  glass: '#bfe3f2',
+  swing: '#ff8a2a',
+  hover: '#23395b',
   zones: {
     kitchen: '#f6c99b',
     washing: '#a9d6e5',

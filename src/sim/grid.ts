@@ -1,6 +1,6 @@
 import type { Level, Tile } from './types';
 
-export type Cell = 'floor' | 'wall' | 'noWalk';
+export type Cell = 'floor' | 'wall' | 'noWalk' | 'door';
 
 export type Grid = {
   w: number;
