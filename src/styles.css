@@ -391,3 +391,104 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
   white-space: nowrap;
   user-select: none;
 }
+
+/* ---------- Game HUD (P6): world fills the screen, HUD stays small ---------- */
+.chip {
+  padding: 8px 12px;
+  background: rgba(247, 251, 255, 0.92);
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 0 4px 0 rgba(35, 57, 91, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+  backdrop-filter: blur(4px);
+}
+.chip-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.chip-title { flex: 1; font-size: 16px; }
+.chip .muted { color: var(--ink-soft); }
+.chip .money { font-weight: 600; }
+.chip .money.over { color: #c0392b; }
+.mini-track { flex: 1; min-width: 50px; height: 7px; border-radius: 999px; background: #e3e7ee; overflow: hidden; }
+.mini-fill { display: block; height: 100%; background: #6cc48a; transition: width 0.2s; }
+.money.over .mini-fill { background: #e5675a; }
+.chip .stats { font-weight: 600; gap: 12px; }
+.chip .bad { color: #c0392b; }
+
+.icon-btn {
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--ink);
+}
+.icon-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.icon-btn.on { background: var(--accent); }
+.icon-btn.big { font-size: 16px; min-width: 42px; }
+.chip .icon-btn { min-width: 26px; height: 26px; padding: 0 6px; font-size: 13px; box-shadow: 0 2px 0 var(--ink); border-radius: 8px; }
+
+.hud.controls { width: auto; align-items: flex-end; gap: 8px; }
+.controls-row { display: flex; gap: 6px; align-items: center; }
+.controls .play-btn { font-size: 17px; padding: 8px 18px; }
+.controls .blocked { max-width: 280px; border-radius: 14px; text-align: right; }
+
+/* compact toolbar */
+.toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(247, 251, 255, 0.92);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 4px 0 rgba(35, 57, 91, 0.15);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.toolbar .tool { min-width: 58px; padding: 4px 6px; border-radius: 12px; gap: 0; }
+.toolbar .tool:disabled { opacity: 0.4; cursor: default; }
+.toolbar .tool-icon { font-size: 22px; }
+.toolbar .tool-cost { font-size: 11px; font-weight: 600; }
+.tool-sep { width: 2px; background: #d5dbe5; margin: 4px 2px; border-radius: 2px; }
+
+/* one-line brief */
+.brief-toast {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  max-width: min(640px, calc(100vw - 32px));
+  font: inherit;
+  color: var(--ink);
+  text-align: center;
+  background: #fffdf5;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  padding: 8px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(35, 57, 91, 0.2);
+  animation: drop 0.35s ease-out;
+}
+.brief-toast strong { font-size: 16px; }
+.brief-toast span { font-size: 12px; color: var(--ink-soft); }
+@keyframes drop { from { transform: translate(-50%, -30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+.results { top: 70px; }
+
+@media (max-width: 900px) {
+  .brief-toast { top: auto; bottom: 110px; }
+  .chip { min-width: 0; }
+}
+
+.hud.top-left.chip { width: auto; }

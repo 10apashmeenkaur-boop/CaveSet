@@ -9,6 +9,7 @@ import type { Level, Tile } from '../sim/types';
 import { useStore } from '../store';
 import { quoteFor } from '../ui/quotes';
 import { tileToWorld } from './coords';
+import { slowmo } from './Feel';
 import { Person } from './Person';
 
 const TICK_SEC = 1 / TICKS_PER_SEC;
@@ -21,7 +22,9 @@ export function SimRunner() {
   useFrame((_, dt) => {
     const s = useStore.getState();
     if (!s.running) return;
-    clock.acc += Math.min(dt, 0.25) * s.speed;
+    // A failure just happened: run at quarter speed for a second so the player sees it.
+    const slow = performance.now() < slowmo.until ? slowmo.factor : 1;
+    clock.acc += Math.min(dt, 0.25) * s.speed * slow;
     while (clock.acc >= TICK_SEC && useStore.getState().running) {
       clock.acc -= TICK_SEC;
       useStore.getState().tick();

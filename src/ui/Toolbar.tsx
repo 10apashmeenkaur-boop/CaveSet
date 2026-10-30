@@ -45,26 +45,31 @@ export function Toolbar({ level }: { level: Level }) {
   return (
     <div className="hud bottom-center">
       {blocked && <div className="blocked">{blocked}</div>}
-      <div className="toolbar blueprint">
-        {tools.map((t, i) => (
-          <button key={t} className={`tool ${tool === t ? 'active' : ''}`} onClick={() => setTool(t)} title={`Shortcut: ${i + 1}`}>
-            <span className="tool-icon">{ICON[t]}</span>
-            <span className="tool-name">{t === 'eraser' ? 'Eraser' : TOOL_INFO[t as BuildTool].name}</span>
-            <span className="tool-cost">{t === 'eraser' ? 'refund' : inr(TOOL_INFO[t as BuildTool].cost)}</span>
-          </button>
-        ))}
-        <div className="tool-side">
-          <button className="btn ghost small" onClick={rotate} disabled={!isDoor && !isSign} title="Shortcut: R">
-            {isSign
-              ? `⟳ Flip arrow (${swing === 1 ? 'right/down' : 'left/up'})`
-              : `⟳ ${orient === 'v' ? 'Vertical' : 'Horizontal'} · swings ${orient === 'v' ? (swing === 1 ? '→' : '←') : swing === 1 ? '↓' : '↑'}`}
-          </button>
-          <button className="btn ghost small" onClick={clearDesign} disabled={!design.items.length}>
-            Clear all
-          </button>
-        </div>
+      <div className="toolbar">
+        {tools.map((t, i) => {
+          const name = t === 'eraser' ? 'Eraser (right-click also erases)' : TOOL_INFO[t as BuildTool].name;
+          return (
+            <button key={t} className={`tool ${tool === t ? 'active' : ''}`} onClick={() => setTool(t)} title={`${name} · key ${i + 1}`}>
+              <span className="tool-icon">{ICON[t]}</span>
+              <span className="tool-cost">{t === 'eraser' ? 'free' : inr(TOOL_INFO[t as BuildTool].cost)}</span>
+            </button>
+          );
+        })}
+        <span className="tool-sep" />
+        <button
+          className="tool"
+          onClick={rotate}
+          disabled={!isDoor && !isSign}
+          title={isSign ? 'Flip the arrow (R)' : `Rotate / flip the door swing (R): ${orient === 'v' ? 'vertical' : 'horizontal'}`}
+        >
+          <span className="tool-icon">⟳</span>
+          <span className="tool-cost">{isSign ? (swing === 1 ? '→ / ↓' : '← / ↑') : orient === 'v' ? (swing === 1 ? 'swing →' : 'swing ←') : swing === 1 ? 'swing ↓' : 'swing ↑'}</span>
+        </button>
+        <button className="tool" onClick={clearDesign} disabled={!design.items.length} title="Clear everything you built">
+          <span className="tool-icon">🗑</span>
+          <span className="tool-cost">clear</span>
+        </button>
       </div>
-      <div className="controls-hint">Left click: build · drag: paint walls · right click: erase · right drag: pan · scroll: zoom · R: rotate door</div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { DesignLayer, GhostLayer, InteractionPlane } from './Build';
 import { COLORS } from './palette';
 import { Floor, Props, ZoneLabels } from './World';
 import { AgentsLayer, DinerBubbles, SimRunner } from './Agents';
+import { AudioDirector, CameraDirector, Lighting } from './Feel';
 import { EditableGlow, FlowArrows, TutorialHint } from './Onboarding';
 import { HeatLayer, IncidentTiles } from './Overlays';
 
@@ -29,18 +30,10 @@ export function Scene({ level }: { level: Level }) {
   return (
     <Canvas shadows style={{ background: COLORS.background }} onContextMenu={(e) => e.preventDefault()}>
       <OrthographicCamera makeDefault position={CAM_POS} zoom={42} near={0.1} far={200} />
-      <MapControls enableRotate={false} screenSpacePanning minZoom={15} maxZoom={120} mouseButtons={MOUSE_BUTTONS} />
-      <ambientLight intensity={0.75} />
-      <directionalLight
-        position={[8, 16, 6]}
-        intensity={1.4}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-15}
-        shadow-camera-right={15}
-        shadow-camera-top={15}
-        shadow-camera-bottom={-15}
-      />
+      <MapControls makeDefault enableRotate={false} screenSpacePanning minZoom={15} maxZoom={120} mouseButtons={MOUSE_BUTTONS} />
+      <Lighting level={level} />
+      <CameraDirector level={level} />
+      <AudioDirector level={level} />
       <Floor level={level} />
       <Props level={level} />
       <ZoneLabels level={level} />

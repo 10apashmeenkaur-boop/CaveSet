@@ -1,20 +1,21 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { findLevel } from '../levels';
 import { Scene } from '../render/Scene';
 import { useStore } from '../store';
-import { BudgetBar } from './BudgetBar';
-import { QuoteBanner } from './QuoteBanner';
+import { BriefToast, Controls, IncidentStrip, LevelChip } from './Hud';
 import { ResultsPanel } from './ResultsPanel';
-import { SimBar } from './SimBar';
 import { Toolbar } from './Toolbar';
 
 export function GameScreen() {
   // Narrow selectors: this wraps the 3D scene, so it must not re-render on every sim tick.
   const levelId = useStore((s) => s.levelId);
-  const goTo = useStore((s) => s.goTo);
   const mode = useStore((s) => s.mode);
   const ended = useStore((s) => !!s.sim && (s.sim.finished || s.sim.timeUp));
   const level = levelId ? findLevel(levelId) : undefined;
+  const [brief, setBrief] = useState(true);
+  const closeBrief = useCallback(() => setBrief(false), []);
+
+  useEffect(() => setBrief(true), [levelId]);
 
   // Space: start / pause / resume.
   useEffect(() => {
@@ -34,36 +35,12 @@ export function GameScreen() {
   return (
     <div className="game">
       <Scene level={level} />
-
-      <div className="hud top-left blueprint">
-        <button className="btn ghost small" onClick={() => goTo('levels')}>
-          ← Levels
-        </button>
-        <h2>{level.title}</h2>
-        <p>{level.brief}</p>
-      </div>
-
-      {ended ? (
-        <ResultsPanel level={level} />
-      ) : (
-        <div className="hud top-right">
-          <BudgetBar level={level} />
-          <QuoteBanner />
-        </div>
-      )}
-
-      {mode === 'design' ? (
-        <>
-          <Toolbar level={level} />
-          <div className="hud bottom-right">
-            <SimBar level={level} />
-          </div>
-        </>
-      ) : (
-        <div className="hud bottom-center">
-          <SimBar level={level} />
-        </div>
-      )}
+      <LevelChip level={level} onBrief={() => setBrief(true)} />
+      <Controls level={level} />
+      {mode === 'design' && <Toolbar level={level} />}
+      {mode === 'sim' && !ended && <IncidentStrip />}
+      {ended && <ResultsPanel level={level} />}
+      <BriefToast level={level} open={brief && mode === 'design'} onClose={closeBrief} />
     </div>
   );
 }

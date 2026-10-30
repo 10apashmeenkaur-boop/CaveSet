@@ -4,7 +4,9 @@ import { buildGrid, doorAt, itemAt, itemTiles, TOOL_INFO } from '../sim/design';
 import { getCell } from '../sim/grid';
 import type { Level } from '../sim/types';
 import { resolveDraft, useStore } from '../store';
+import { sfx } from '../audio/sfx';
 import { tileToWorld } from './coords';
+import { DropIn } from './Feel';
 import { DoorItem, SignItem, WallBlock } from './Items';
 import { COLORS } from './palette';
 
@@ -19,12 +21,16 @@ export function DesignLayer({ level }: { level: Level }) {
   return (
     <group>
       {walls.map(([x, y]) => (
-        <WallBlock key={`${x},${y}`} position={tileToWorld(level, x, y)} />
+        <DropIn key={`${x},${y}`}>
+          <WallBlock position={tileToWorld(level, x, y)} />
+        </DropIn>
       ))}
       {design.items
         .filter((it) => TOOL_INFO[it.tool].door)
         .map((it) => (
-          <DoorItem key={it.id} level={level} item={it} />
+          <DropIn key={it.id}>
+            <DoorItem level={level} item={it} />
+          </DropIn>
         ))}
       {design.items
         .filter((it) => TOOL_INFO[it.tool].sign)
@@ -106,8 +112,12 @@ export function InteractionPlane({ level }: { level: Level }) {
   const act = (mode: 'build' | 'erase', x: number, y: number) => {
     const s = useStore.getState();
     if (s.mode !== 'design') return;
+    const before = s.design.items.length;
     if (mode === 'erase' || s.tool === 'eraser') s.eraseAt(x, y);
     else s.placeAt(x, y);
+    const after = useStore.getState().design.items.length;
+    if (after > before) sfx(s.tool !== 'eraser' && TOOL_INFO[s.tool].hinged ? 'creak' : 'place');
+    else if (after < before) sfx('erase');
   };
 
   return (
