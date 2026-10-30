@@ -107,6 +107,7 @@ export function InteractionPlane({ level }: { level: Level }) {
 
   const act = (mode: 'build' | 'erase', x: number, y: number) => {
     const s = useStore.getState();
+    if (s.mode !== 'design') return;
     if (mode === 'erase' || s.tool === 'eraser') s.eraseAt(x, y);
     else s.placeAt(x, y);
   };
@@ -118,6 +119,7 @@ export function InteractionPlane({ level }: { level: Level }) {
       onPointerMove={(e) => {
         const t = tileOf(e);
         const s = useStore.getState();
+        if (s.mode !== 'design') return;
         const prev = s.hover;
         if (t?.[0] === prev?.[0] && t?.[1] === prev?.[1]) return;
         s.setHover(t);

@@ -1,13 +1,32 @@
+import { useEffect } from 'react';
 import { findLevel } from '../levels';
 import { Scene } from '../render/Scene';
 import { useStore } from '../store';
 import { BudgetBar } from './BudgetBar';
 import { QuoteBanner } from './QuoteBanner';
+import { SimBar } from './SimBar';
 import { Toolbar } from './Toolbar';
 
 export function GameScreen() {
-  const { levelId, goTo } = useStore();
+  // Narrow selectors: this wraps the 3D scene, so it must not re-render on every sim tick.
+  const levelId = useStore((s) => s.levelId);
+  const goTo = useStore((s) => s.goTo);
+  const mode = useStore((s) => s.mode);
   const level = levelId ? findLevel(levelId) : undefined;
+
+  // Space: start / pause / resume.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return;
+      e.preventDefault();
+      const s = useStore.getState();
+      if (s.running) s.pause();
+      else if (!s.sim?.finished && !s.sim?.timeUp) s.play();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   if (!level) return null;
 
   return (
@@ -27,7 +46,18 @@ export function GameScreen() {
         <QuoteBanner />
       </div>
 
-      <Toolbar level={level} />
+      {mode === 'design' ? (
+        <>
+          <Toolbar level={level} />
+          <div className="hud bottom-right">
+            <SimBar level={level} />
+          </div>
+        </>
+      ) : (
+        <div className="hud bottom-center">
+          <SimBar level={level} />
+        </div>
+      )}
     </div>
   );
 }

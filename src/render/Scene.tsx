@@ -2,11 +2,11 @@ import { MapControls, OrthographicCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { MOUSE } from 'three';
 import type { Level } from '../sim/types';
+import { useStore } from '../store';
 import { DesignLayer, GhostLayer, InteractionPlane } from './Build';
-import { tileToWorld } from './coords';
 import { COLORS } from './palette';
 import { Floor, Props, ZoneLabels } from './World';
-import { Person } from './Person';
+import { AgentsLayer, SimRunner } from './Agents';
 
 // Isometric-ish view: ~45° yaw, ~35° pitch.
 const YAW = Math.PI / 4;
@@ -21,24 +21,8 @@ const CAM_POS: [number, number, number] = [
 // Left button is for building; right/middle drag pans. (-1 = no action in OrbitControls.)
 const MOUSE_BUTTONS = { LEFT: -1 as MOUSE, MIDDLE: MOUSE.PAN, RIGHT: MOUSE.PAN };
 
-/** Idle preview crowd so the character style is visible before agents exist (replaced in M3). */
-function PreviewPeople({ level }: { level: Level }) {
-  const spots: { type: 'crate' | 'tray' | 'empty' | 'elderly'; x: number; y: number }[] = [
-    { type: 'crate', x: 3, y: 3 },
-    { type: 'tray', x: 5, y: 6 },
-    { type: 'empty', x: 2, y: 7 },
-    { type: 'elderly', x: level.grid.w - 3, y: 4 },
-  ];
-  return (
-    <group>
-      {spots.map((s, i) => (
-        <Person key={i} type={s.type} position={tileToWorld(level, s.x, s.y)} facing={YAW} skin={i} phase={i * 1.3} />
-      ))}
-    </group>
-  );
-}
-
 export function Scene({ level }: { level: Level }) {
+  const mode = useStore((s) => s.mode);
   return (
     <Canvas shadows style={{ background: COLORS.background }} onContextMenu={(e) => e.preventDefault()}>
       <OrthographicCamera makeDefault position={CAM_POS} zoom={42} near={0.1} far={200} />
@@ -58,9 +42,10 @@ export function Scene({ level }: { level: Level }) {
       <Props level={level} />
       <ZoneLabels level={level} />
       <DesignLayer level={level} />
-      <GhostLayer level={level} />
+      {mode === 'design' && <GhostLayer level={level} />}
       <InteractionPlane level={level} />
-      <PreviewPeople level={level} />
+      <AgentsLayer level={level} />
+      <SimRunner />
     </Canvas>
   );
 }

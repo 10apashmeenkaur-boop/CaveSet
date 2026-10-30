@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { findLevel } from './levels';
 import { EMPTY_DESIGN, eraseAt, place, type BuildTool, type Design, type Orient, type Side } from './sim/design';
+import { makeWorld, type World } from './sim/pathfinding';
+import { initSim, step, type SimState } from './sim/simulate';
 import type { Tile, ToolId } from './sim/types';
 
 export type Screen = 'levels' | 'game' | 'journal';
@@ -58,6 +60,18 @@ type Store = {
   placeAt: (x: number, y: number) => void;
   eraseAt: (x: number, y: number) => void;
   clearDesign: () => void;
+
+  // Simulation
+  mode: 'design' | 'sim';
+  sim: SimState | null;
+  world: World | null;
+  running: boolean;
+  speed: 1 | 2 | 4;
+  play: () => void;
+  pause: () => void;
+  backToDesign: () => void;
+  setSpeed: (speed: 1 | 2 | 4) => void;
+  tick: () => void;
 };
 
 export const useStore = create<Store>((set, get) => ({
@@ -72,6 +86,10 @@ export const useStore = create<Store>((set, get) => ({
       tool: findLevel(id)?.allowedTools[0] ?? 'wall',
       orientIdx: 0,
       hover: null,
+      mode: 'design',
+      sim: null,
+      world: null,
+      running: false,
     }),
   goTo: (screen) => set({ screen }),
   setProgress: (fn) =>
@@ -96,6 +114,30 @@ export const useStore = create<Store>((set, get) => ({
   },
   eraseAt: (x, y) => set((s) => ({ design: eraseAt(s.design, x, y) })),
   clearDesign: () => set({ design: EMPTY_DESIGN }),
+
+  mode: 'design',
+  sim: null,
+  world: null,
+  running: false,
+  speed: 1,
+  play: () => {
+    const { mode, levelId, design } = get();
+    const level = levelId ? findLevel(levelId) : undefined;
+    if (!level) return;
+    // Starting fresh from design mode bakes the design into a world once.
+    if (mode === 'design') set({ mode: 'sim', world: makeWorld(level, design), sim: initSim(level), running: true, hover: null });
+    else set({ running: true });
+  },
+  pause: () => set({ running: false }),
+  backToDesign: () => set({ mode: 'design', sim: null, world: null, running: false }),
+  setSpeed: (speed) => set({ speed }),
+  tick: () => {
+    const { levelId, world, sim } = get();
+    const level = levelId ? findLevel(levelId) : undefined;
+    if (!level || !world || !sim) return;
+    const next = step(level, world, sim);
+    set({ sim: next, running: get().running && !next.finished && !next.timeUp });
+  },
 }));
 
 export function draftFor(tool: BuildTool, x: number, y: number, orientIdx: number) {

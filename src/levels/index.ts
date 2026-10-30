@@ -17,7 +17,11 @@ export const SANDBOX: Level = {
     washing: { x: 11, y: 0, w: 5, h: 10 },
   },
   noWalk: [],
-  spawns: [],
+  spawns: [
+    { type: 'crate', from: 'kitchen', to: 'washing', count: 4, every: 25 },
+    { type: 'crate', from: 'washing', to: 'kitchen', count: 4, every: 25, delay: 12 },
+    { type: 'tray', from: 'kitchen', to: 'washing', count: 3, every: 30, delay: 6 },
+  ],
   budget: Infinity,
   timeLimitSec: 0,
   allowedTools: ['wall', 'door1', 'door2', 'slide1', 'slide2'],

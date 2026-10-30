@@ -213,3 +213,32 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .zone-label.zone-kitchen { background: #ffe6cc; }
 .zone-label.zone-washing { background: #dff1f7; }
 .zone-label.zone-dining { background: #e6f2db; }
+
+/* Simulation controls */
+.hud.bottom-right { right: 16px; bottom: 16px; }
+.play-btn { font-size: 20px; padding: 14px 26px; background: #6cc48a; }
+.simbar { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; align-items: center; min-width: min(560px, calc(100vw - 32px)); }
+.sim-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.speed.on { background: var(--accent); }
+.sim-stats { display: flex; gap: 18px; font-weight: 600; flex-wrap: wrap; justify-content: center; }
+.sim-stats .muted { color: var(--ink-soft); font-weight: 400; }
+.sim-stats .bad { color: #c0392b; }
+.sim-result { padding: 6px 16px; border-radius: 999px; font-weight: 600; border: 2px solid currentColor; }
+.sim-result.good { color: #2e7d4f; background: #e3f5e9; }
+.sim-result.bad { color: #a3341f; background: #fde4e1; }
+
+.stuck-mark {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+  background: #e5675a;
+  border: 2px solid #23395b;
+  border-radius: 999px;
+  padding: 0 7px;
+  user-select: none;
+}
+
+@media (max-width: 900px) {
+  .hud.bottom-right { bottom: auto; top: 140px; }
+}
