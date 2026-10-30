@@ -1,0 +1,22 @@
+{
+  "id": "l2-corridor",
+  "title": "The Service Corridor",
+  "brief": "The dining hall sits between kitchen and washing. Nobody walks through people eating. Build a corridor around it. Budget ₹20,000. Finish in 120s.",
+  "grid": { "w": 20, "h": 14 },
+  "fixedWalls": [],
+  "editableTiles": "all",
+  "zones": {
+    "kitchen": { "x": 0, "y": 0, "w": 5, "h": 14 },
+    "dining": { "x": 7, "y": 2, "w": 6, "h": 10 },
+    "washing": { "x": 15, "y": 0, "w": 5, "h": 14 }
+  },
+  "noWalk": [[7,2],[8,2],[9,2],[10,2],[11,2],[12,2],[7,3],[8,3],[9,3],[10,3],[11,3],[12,3],[7,4],[8,4],[9,4],[10,4],[11,4],[12,4],[7,5],[8,5],[9,5],[10,5],[11,5],[12,5],[7,6],[8,6],[9,6],[10,6],[11,6],[12,6],[7,7],[8,7],[9,7],[10,7],[11,7],[12,7],[7,8],[8,8],[9,8],[10,8],[11,8],[12,8],[7,9],[8,9],[9,9],[10,9],[11,9],[12,9],[7,10],[8,10],[9,10],[10,10],[11,10],[12,10],[7,11],[8,11],[9,11],[10,11],[11,11],[12,11]],
+  "spawns": [
+    { "type": "crate", "from": "kitchen", "to": "washing", "count": 5, "every": 25 },
+    { "type": "crate", "from": "washing", "to": "kitchen", "count": 5, "every": 25, "delay": 12 },
+    { "type": "elderly", "from": "kitchen", "to": "washing", "count": 2, "every": 120, "delay": 60 }
+  ],
+  "budget": 20000,
+  "timeLimitSec": 120,
+  "allowedTools": ["wall", "door1", "door2", "slide1", "slide2"]
+}

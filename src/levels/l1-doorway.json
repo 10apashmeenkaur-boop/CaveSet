@@ -1,0 +1,20 @@
+{
+  "id": "l1-doorway",
+  "title": "The Doorway",
+  "brief": "Sevadars carry crates both ways between kitchen and washing. Make the wall passable. Budget ₹6,000. Finish in 90s.",
+  "grid": { "w": 16, "h": 10 },
+  "fixedWalls": [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[8,7],[8,8],[8,9]],
+  "editableTiles": "wall-x-8-only",
+  "zones": {
+    "kitchen": { "x": 0, "y": 0, "w": 7, "h": 10 },
+    "washing": { "x": 9, "y": 0, "w": 7, "h": 10 }
+  },
+  "noWalk": [],
+  "spawns": [
+    { "type": "crate", "from": "kitchen", "to": "washing", "count": 6, "every": 20 },
+    { "type": "crate", "from": "washing", "to": "kitchen", "count": 6, "every": 20, "delay": 10 }
+  ],
+  "budget": 6000,
+  "timeLimitSec": 90,
+  "allowedTools": ["door1", "door2", "slide1", "slide2"]
+}

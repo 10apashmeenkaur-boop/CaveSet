@@ -1,0 +1,112 @@
+import { MapControls, OrthographicCamera } from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
+import { useMemo } from 'react';
+import type { Level } from '../sim/types';
+import { tileToWorld } from './coords';
+import { COLORS } from './palette';
+import { Person } from './Person';
+
+// Isometric-ish view: ~45° yaw, ~35° pitch.
+const YAW = Math.PI / 4;
+const PITCH = (35 * Math.PI) / 180;
+const DIST = 40;
+const CAM_POS: [number, number, number] = [
+  DIST * Math.cos(PITCH) * Math.sin(YAW),
+  DIST * Math.sin(PITCH),
+  DIST * Math.cos(PITCH) * Math.cos(YAW),
+];
+
+function Floor({ level }: { level: Level }) {
+  const { w, h } = level.grid;
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[w, h]} />
+        <meshStandardMaterial color={COLORS.floor} />
+      </mesh>
+      {Object.entries(level.zones).map(([name, z]) => {
+        const [cx, , cz] = tileToWorld(level, z.x + z.w / 2 - 0.5, z.y + z.h / 2 - 0.5);
+        return (
+          <mesh key={name} rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.005, cz]} receiveShadow>
+            <planeGeometry args={[z.w, z.h]} />
+            <meshStandardMaterial color={COLORS.zones[name] ?? '#ddd'} transparent opacity={0.55} />
+          </mesh>
+        );
+      })}
+      <GridLines w={w} h={h} />
+    </group>
+  );
+}
+
+function GridLines({ w, h }: { w: number; h: number }) {
+  const positions = useMemo(() => {
+    const pts: number[] = [];
+    for (let x = 0; x <= w; x++) pts.push(x - w / 2, 0, -h / 2, x - w / 2, 0, h / 2);
+    for (let y = 0; y <= h; y++) pts.push(-w / 2, 0, y - h / 2, w / 2, 0, y - h / 2);
+    return new Float32Array(pts);
+  }, [w, h]);
+  return (
+    <lineSegments position={[0, 0.01, 0]}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <lineBasicMaterial color={COLORS.gridLine} />
+    </lineSegments>
+  );
+}
+
+function Walls({ level }: { level: Level }) {
+  return (
+    <group>
+      {level.fixedWalls.map(([x, y]) => {
+        const [wx, , wz] = tileToWorld(level, x, y);
+        return (
+          <mesh key={`${x},${y}`} position={[wx, 0.6, wz]} castShadow receiveShadow>
+            <boxGeometry args={[1, 1.2, 1]} />
+            <meshStandardMaterial color={COLORS.wall} flatShading />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Idle preview crowd so the character style is visible before agents exist (replaced in M3). */
+function PreviewPeople({ level }: { level: Level }) {
+  const spots: { type: 'crate' | 'tray' | 'empty' | 'elderly'; x: number; y: number }[] = [
+    { type: 'crate', x: 3, y: 3 },
+    { type: 'tray', x: 5, y: 6 },
+    { type: 'empty', x: 2, y: 7 },
+    { type: 'elderly', x: level.grid.w - 3, y: 4 },
+  ];
+  return (
+    <group>
+      {spots.map((s, i) => (
+        <Person key={i} type={s.type} position={tileToWorld(level, s.x, s.y)} facing={YAW} skin={i} phase={i * 1.3} />
+      ))}
+    </group>
+  );
+}
+
+export function Scene({ level }: { level: Level }) {
+  return (
+    <Canvas shadows style={{ background: COLORS.background }}>
+      <OrthographicCamera makeDefault position={CAM_POS} zoom={42} near={0.1} far={200} />
+      <MapControls enableRotate={false} screenSpacePanning minZoom={15} maxZoom={120} />
+      <ambientLight intensity={0.75} />
+      <directionalLight
+        position={[8, 16, 6]}
+        intensity={1.4}
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-left={-15}
+        shadow-camera-right={15}
+        shadow-camera-top={15}
+        shadow-camera-bottom={-15}
+      />
+      <Floor level={level} />
+      <Walls level={level} />
+      <PreviewPeople level={level} />
+    </Canvas>
+  );
+}
