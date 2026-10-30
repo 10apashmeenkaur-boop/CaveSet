@@ -1,6 +1,6 @@
 import { LEVELS, SANDBOX } from '../levels';
 import { useStore } from '../store';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isMuted, setMuted } from '../audio/sfx';
 import { QuoteBanner } from './QuoteBanner';
 
@@ -31,7 +31,17 @@ function Stars({ n }: { n: number }) {
 }
 
 export function LevelSelect() {
-  const { progress, openLevel, goTo } = useStore();
+  const { progress, openLevel, goTo, setProgress } = useStore();
+
+  // Dev builds only: U unlocks (or relocks) every level, for testing without replaying.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'u' || e.key === 'U') setProgress((p) => ({ ...p, devUnlock: !p.devUnlock }));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [setProgress]);
 
   return (
     <div className="page">
@@ -43,7 +53,7 @@ export function LevelSelect() {
         <div className="head-buttons">
           <SoundToggle />
           <button className="btn ghost" onClick={() => goTo('journal')}>
-            📓 Design Journal
+            📓 Mistri Ji ki diary
           </button>
         </div>
       </header>
@@ -54,7 +64,7 @@ export function LevelSelect() {
       <div className="cards">
         {LEVELS.map((lvl, i) => {
           // A level unlocks once the previous one has at least one star.
-          const locked = i > 0 && !progress.stars[LEVELS[i - 1].id];
+          const locked = i > 0 && !progress.stars[LEVELS[i - 1].id] && !(import.meta.env.DEV && progress.devUnlock);
           return (
             <button key={lvl.id} className="card blueprint" disabled={locked} onClick={() => openLevel(lvl.id)}>
               <span className="card-num">Level {i + 1}</span>

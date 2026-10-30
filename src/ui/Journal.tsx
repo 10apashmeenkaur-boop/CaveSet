@@ -1,3 +1,4 @@
+import { LEVELS } from '../levels';
 import { PRINCIPLES, type IncidentCode } from '../sim/failures';
 import { useStore } from '../store';
 import { QuoteBanner } from './QuoteBanner';
@@ -5,17 +6,20 @@ import { quoteFor } from './quotes';
 
 const CODES = Object.keys(PRINCIPLES) as IncidentCode[];
 
+/** Mistri Ji ki diary: one insight page per level (fail it, then pass it), then every principle learned from a failure. */
 export function Journal() {
   const { progress, goTo } = useStore();
   const unlocked = new Set(progress.principles);
+  const pages = LEVELS.filter((l) => l.insight);
 
   return (
     <div className="page">
       <header className="page-head">
         <div>
-          <h1>Design Journal</h1>
+          <h1>Mistri Ji ki diary</h1>
           <p className="tagline">
-            {CODES.filter((c) => unlocked.has(c)).length} of {CODES.length} principles learned, each one the hard way.
+            {pages.filter((l) => progress.insights.includes(l.id)).length} of {pages.length} pages written. Fail a level, then pass it, and
+            Mistri Ji writes it down.
           </p>
         </div>
         <button className="btn ghost" onClick={() => goTo('levels')}>
@@ -25,6 +29,29 @@ export function Journal() {
 
       <QuoteBanner />
 
+      <div className="cards">
+        {pages.map((lvl, i) => {
+          const page = lvl.insight!;
+          return progress.insights.includes(lvl.id) ? (
+            <article key={lvl.id} className="card blueprint diary-card">
+              <span className="card-num">Level {i + 1} · {lvl.title}</span>
+              <h3>{page.title}</h3>
+              <p>{page.principle}</p>
+              <p className="diary-example">🌍 {page.example}</p>
+              {page.number && <p className="diary-number">📏 {page.number}</p>}
+              <p className="journal-quote">“{page.quote}” <span className="diary-by">— Mistri Ji</span></p>
+            </article>
+          ) : (
+            <article key={lvl.id} className="card blueprint locked-card">
+              <span className="card-num">Level {i + 1} · {lvl.title}</span>
+              <h3>Page still blank</h3>
+              <p>Fail this level once, then pass it.</p>
+            </article>
+          );
+        })}
+      </div>
+
+      <h2 className="section-title">Learned the hard way · {CODES.filter((c) => unlocked.has(c)).length} of {CODES.length}</h2>
       <div className="cards">
         {CODES.map((code) => {
           const p = PRINCIPLES[code];

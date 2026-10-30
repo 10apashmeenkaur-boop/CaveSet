@@ -2,6 +2,24 @@
   "id": "l3-queue",
   "title": "Langar Queue",
   "brief": "50 sangat arrive in waves: shoes off, wash hands, cover heads, then sit. Keep the line moving and get everyone seated. Budget ₹12,000. Finish in 3 min.",
+  "goalLabel": "🍽 {n}/{total} seated",
+  "mistri": {
+    "brief": "Sangat aa rahi hai! Sab ko jaldi pangat tak pahunchao.",
+    "hints": {
+      "QUEUE_OVERFLOW": "Laal nishaan dekho. Line wahan atki hai, baaki jagah nahi.",
+      "UNDERUSED_HALL": "Laal nishaan dekho. Line wahan atki hai, baaki jagah nahi.",
+      "CROSS_FLOW": "Khaana kha ke log bahar kahan se ja rahe hain?",
+      "NO_PATH": "Sangat ko hall tak pahunchne ka raasta chahiye.",
+      "default": "Sabse lambi line kahan hai? Wahin se shuru karo."
+    }
+  },
+  "insight": {
+    "title": "The bottleneck sets the speed",
+    "principle": "A line moves only as fast as its slowest step. Fix that step first; speeding up any other step changes nothing.",
+    "example": "When airport security lines grow, they open more scanners, not more check-in desks. Factories call this the Theory of Constraints.",
+    "number": "One shoe stand at 4 s a person serves 15 people a minute. 50 people in 80 s is 37 a minute, so you need 3.",
+    "quote": "Pehle dekho line kahan atki hai, phir paisa lagao."
+  },
   "grid": {
     "w": 21,
     "h": 12

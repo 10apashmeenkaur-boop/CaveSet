@@ -16,10 +16,15 @@ type Props = {
   seated?: boolean;
   /** Override the role colour. */
   shirt?: string;
+  /** Faint and see-through: a personal-best ghost. */
+  ghost?: boolean;
 };
 
+const GHOST = { transparent: true, opacity: 0.28, depthWrite: false } as const;
+
 /** Cartoon bobble-head: round body, big head, dot eyes, no limbs. */
-export function Person({ type, position, facing = 0, skin = 0, phase = 0, walking = true, seated = false, shirt }: Props) {
+export function Person({ type, position, facing = 0, skin = 0, phase = 0, walking = true, seated = false, shirt, ghost = false }: Props) {
+  const see = ghost ? GHOST : {};
   const bob = useRef<Group>(null);
   const slow = type === 'elderly';
 
@@ -41,20 +46,20 @@ export function Person({ type, position, facing = 0, skin = 0, phase = 0, walkin
 
       <group ref={bob} rotation={[slow ? 0.15 : 0, 0, 0]}>
         {/* Body */}
-        <mesh position={[0, 0.3, 0]} scale={[1, 1.15, 0.9]} castShadow>
+        <mesh position={[0, 0.3, 0]} scale={[1, 1.15, 0.9]} castShadow={!ghost}>
           <sphereGeometry args={[0.24, 16, 12]} />
-          <meshStandardMaterial color={shirt ?? SHIRT[type]} flatShading />
+          <meshStandardMaterial color={shirt ?? SHIRT[type]} flatShading {...see} />
         </mesh>
         {/* Head */}
-        <mesh position={[0, 0.72, 0]} castShadow>
+        <mesh position={[0, 0.72, 0]} castShadow={!ghost}>
           <sphereGeometry args={[0.24, 18, 14]} />
-          <meshStandardMaterial color={SKIN[skin % SKIN.length]} flatShading />
+          <meshStandardMaterial color={SKIN[skin % SKIN.length]} flatShading {...see} />
         </mesh>
         {/* Eyes, facing +z */}
         {[-0.08, 0.08].map((x) => (
           <mesh key={x} position={[x, 0.75, 0.215]}>
             <sphereGeometry args={[0.035, 8, 6]} />
-            <meshBasicMaterial color="#2b2b3a" />
+            <meshBasicMaterial color="#2b2b3a" {...see} />
           </mesh>
         ))}
         {type === 'crate' && (

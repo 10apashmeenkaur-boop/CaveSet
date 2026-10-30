@@ -18,20 +18,17 @@ import {
   type Side,
 } from './sim/design';
 import { makeWorld, type World } from './sim/pathfinding';
+import { EMPTY_PROGRESS, recordRun, type Progress } from './sim/progress';
 import { score } from './sim/scoring';
 import { initSim, step, type SimState } from './sim/simulate';
 import type { Level, Tile, ToolId } from './sim/types';
 
 export type Screen = 'levels' | 'game' | 'journal';
 
-export type Progress = {
-  stars: Record<string, number>;
-  /** Incident codes whose principles the player has unlocked. */
-  principles: string[];
-};
+export type { Progress };
 
 const STORAGE_KEY = 'design-lab.progress.v1';
-const EMPTY: Progress = { stars: {}, principles: [] };
+const EMPTY = EMPTY_PROGRESS;
 
 function loadProgress(): Progress {
   try {
@@ -96,6 +93,11 @@ type Store = {
   /** Incident card being inspected (index into sim.incidents): its tiles are highlighted. */
   focus: number | null;
   setFocus: (i: number | null) => void;
+  /** Personal-best ghost: the best passing design, replayed tick for tick beside this run. */
+  showGhost: boolean;
+  toggleGhost: () => void;
+  ghostSim: SimState | null;
+  ghostWorld: World | null;
 };
 
 /** Add newly learned principles to saved progress. */
@@ -127,6 +129,8 @@ export const useStore = create<Store>((set, get) => ({
       running: false,
       notice: null,
       focus: null,
+      ghostSim: null,
+      ghostWorld: null,
     }),
   goTo: (screen) => set({ screen }),
   setProgress: (fn) =>
@@ -174,25 +178,41 @@ export const useStore = create<Store>((set, get) => ({
     // Starting fresh from design mode bakes the design into a world once.
     if (mode === 'design') {
       const world = makeWorld(level, design);
-      set({ notice: null, mode: 'sim', world, sim: initSim(level, level.seed, world), running: true, hover: null });
+      const best = get().progress.best[level.id];
+      const ghostWorld = best ? makeWorld(level, best.design) : null;
+      set({
+        notice: null,
+        mode: 'sim',
+        world,
+        sim: initSim(level, level.seed, world),
+        ghostWorld,
+        ghostSim: ghostWorld ? initSim(level, level.seed, ghostWorld) : null,
+        running: true,
+        hover: null,
+      });
     }
     else set({ running: true });
   },
   pause: () => set({ running: false }),
-  backToDesign: () => set({ mode: 'design', sim: null, world: null, running: false, focus: null }),
+  backToDesign: () => set({ mode: 'design', sim: null, world: null, running: false, focus: null, ghostSim: null, ghostWorld: null }),
   setSpeed: (speed) => set({ speed }),
   tick: () => {
-    const { levelId, world, sim } = get();
+    const { levelId, world, sim, ghostSim, ghostWorld } = get();
     const level = levelId ? findLevel(levelId) : undefined;
     if (!level || !world || !sim) return;
     const next = step(level, world, sim);
-    set({ sim: next, running: get().running && !next.finished && !next.timeUp });
+    const ghost = ghostSim && ghostWorld ? step(level, ghostWorld, ghostSim) : null;
+    set({ sim: next, ghostSim: ghost, running: get().running && !next.finished && !next.timeUp });
     if ((next.finished || next.timeUp) && !(sim.finished || sim.timeUp)) {
-      // Failing teaches: every incident's principle goes into the Design Journal.
-      unlock(set, next.incidents.map((i) => i.code));
-      // Keep the best star count per level; any star unlocks the next level.
-      const { stars } = score(level, next, costOf(get().design));
-      if (stars > (get().progress.stars[level.id] ?? 0)) get().setProgress((p) => ({ ...p, stars: { ...p.stars, [level.id]: stars } }));
+      // Failing teaches: every incident's principle goes into the diary.
+      const codes = next.incidents.map((i) => i.code);
+      unlock(set, codes);
+      // Stars (any star unlocks the next level), Mistri Ji's fail streak, diary pages, best run.
+      if (level.id !== 'sandbox') {
+        const design = get().design;
+        const r = score(level, next, costOf(design));
+        get().setProgress((p) => recordRun(p, level, r, codes, design));
+      }
     }
   },
   showHeat: false,
@@ -200,6 +220,10 @@ export const useStore = create<Store>((set, get) => ({
   notice: null,
   focus: null,
   setFocus: (focus) => set({ focus }),
+  showGhost: false,
+  toggleGhost: () => set((s) => ({ showGhost: !s.showGhost })),
+  ghostSim: null,
+  ghostWorld: null,
 }));
 
 export function draftFor(tool: BuildTool, x: number, y: number, orientIdx: number) {

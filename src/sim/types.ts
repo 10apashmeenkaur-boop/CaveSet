@@ -62,4 +62,12 @@ export type Level = {
   allowedTools: ToolId[];
   stations?: FixedStation[];
   queue?: QueueRules;
+  /** Sim bar progress text, e.g. "🍽 {n}/{total} seated". Default "📦 {n}/{total} delivered". */
+  goalLabel?: string;
+  /** Mistri Ji: a one-line brief, and nudges keyed by failure code (plus "default") after repeated failed runs. */
+  mistri?: { brief: string; hints: Record<string, string> };
+  /** Mistri Ji ki diary page, unlocked by failing this level and then passing it. */
+  insight?: Insight;
 };
+
+export type Insight = { title: string; principle: string; example: string; number?: string; quote: string };

@@ -2,6 +2,23 @@
   "id": "l1-doorway",
   "title": "The Doorway",
   "brief": "Sevadars carry crates both ways between kitchen and washing. Make the wall passable. Budget ₹7,500. Finish in 60s.",
+  "goalLabel": "📦 {n}/{total} delivered",
+  "mistri": {
+    "brief": "Crate dono taraf jaate hain, puttar. Soch ke darwaza banana.",
+    "hints": {
+      "TOO_NARROW": "Crate wala banda kitna chauda hai? Pehle naap lo.",
+      "HEAD_ON_JAM": "Aane wale aur jaane wale ek hi raste pe kyon?",
+      "TIME_LIMIT": "Dekho log kahan ruk rahe hain. Wahi gadbad hai.",
+      "default": "Ek baar dhyaan se dekho log kahan atakte hain."
+    }
+  },
+  "insight": {
+    "title": "Separate the flows",
+    "principle": "When people move both ways, give each direction its own path.",
+    "example": "Metro stations have separate entry and exit gates, and busy restaurant kitchens have an IN door and an OUT door so waiters never collide.",
+    "number": "A 1.2 m doorway passes about 1.5 people a second, in one direction.",
+    "quote": "Ek darwaza, do raste? Takkar pakki hai, puttar."
+  },
   "grid": { "w": 16, "h": 10 },
   "fixedWalls": [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[8,7],[8,8],[8,9]],
   "editableTiles": "wall-x-8-only",

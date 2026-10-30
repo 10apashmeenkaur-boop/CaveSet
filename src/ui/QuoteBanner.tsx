@@ -1,4 +1,7 @@
 import { useMemo } from 'react';
+import { mistriLine } from '../sim/progress';
+import type { Level } from '../sim/types';
+import { useStore } from '../store';
 import { FAILURE_LABEL, pickQuote, type FailureCode } from './quotes';
 
 export function QuoteBanner({ codes }: { codes?: FailureCode[] }) {
@@ -8,6 +11,19 @@ export function QuoteBanner({ codes }: { codes?: FailureCode[] }) {
     <figure className="quote">
       <blockquote>“{q.text}”</blockquote>
       <figcaption>— {FAILURE_LABEL[q.code]}</figcaption>
+    </figure>
+  );
+}
+
+/** In a level, the quote card is Mistri Ji: his brief, then a nudge ("salaah") after repeated failed runs. */
+export function MistriCard({ level }: { level: Level }) {
+  const line = useStore((s) => mistriLine(level, s.progress));
+  if (!line) return <QuoteBanner />;
+  return (
+    <figure className={`quote mistri ${line.hint ? 'salaah' : ''}`}>
+      {line.hint && <span className="salaah-tag">Mistri Ji ki salaah</span>}
+      <blockquote>“{line.text}”</blockquote>
+      <figcaption>— Mistri Ji</figcaption>
     </figure>
   );
 }

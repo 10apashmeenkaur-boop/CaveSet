@@ -6,7 +6,7 @@ import { useStore } from '../store';
 import { DesignLayer, GhostLayer, InteractionPlane } from './Build';
 import { COLORS } from './palette';
 import { Floor, Props, ZoneLabels } from './World';
-import { AgentsLayer, DinerBubbles, SimRunner } from './Agents';
+import { AgentsLayer, BestRunGhosts, DinerBubbles, SimRunner } from './Agents';
 import { AudioDirector, CameraDirector, Lighting } from './Feel';
 import { EditableGlow } from './Onboarding';
 import { BusiestMarker, HeatLayer, IncidentTiles } from './Overlays';
@@ -47,6 +47,7 @@ export function Scene({ level }: { level: Level }) {
       <HeatLayer level={level} />
       <IncidentTiles level={level} />
       <AgentsLayer level={level} />
+      <BestRunGhosts level={level} />
       {level.queue && <BusiestMarker level={level} />}
       <DinerBubbles level={level} />
       <SimRunner />

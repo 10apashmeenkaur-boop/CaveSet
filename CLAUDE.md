@@ -15,7 +15,7 @@ Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 pro
 - Characters: generic cartoon bobble-heads (round body, big head, dot eyes), bouncy walk, no limbs. Shirt color = role. No cultural attire.
 - Screens: Level select, Game view, Design Journal. (No title menu, no separate brief screen — brief lives in the game HUD.)
 - Look: soft pastel cartoon world + blueprint-style UI panels (grid-paper, navy ink, handwritten accents).
-- Every screen shows a complaint quote (`src/ui/quotes.ts`): short (<8 words), casual, light Hinglish, how real sevadars talk. Each quote belongs to a failure code (TOO_NARROW, HEAD_ON_JAM, SWING_BLOCK, NO_PATH, TIME_LIMIT); M5 speech bubbles reuse them.
+- Every screen shows a complaint quote (`src/ui/quotes.ts`); in a level that card is Mistri Ji instead: short (<8 words), casual, light Hinglish, how real sevadars talk. Each quote belongs to a failure code (TOO_NARROW, HEAD_ON_JAM, SWING_BLOCK, NO_PATH, TIME_LIMIT); M5 speech bubbles reuse them.
 - Dining hall is a soft no-walk: walkable at extra A* cost (DINING_COST), never hard-blocked. Stepping in raises DINING_DISTURBED and diners complain ("Bhaji, khaana kha rahe hain!").
 - Level 2 has fixed walls: kitchen/washing walls plus a brick ring around the dining hall with sangat entrances. Players cut doors (and may brick up entrances).
 - Level 1 budget is ₹7,500 (plan said ₹6,000, which made separate in/out flows unaffordable).
@@ -29,3 +29,8 @@ Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 pro
 - Stars (ROADMAP 8.2 with a per-level `starCost`): 1 = pass, 2 = also within `targetSec`, 3 = also cost ≤ `starCost`. L1 starCost ₹7,500; L2 ₹9,500 (cheapest clean design is ₹9,000).
 - Each level has a fixed `seed` in its JSON, so the same design always gives the same result.
 - Level 3 "Langar Queue" (21×12): sangat visits shoe stand (4s) → tap (6s) → head-cover basket (2s) → seat; 5 waves of 10 every 20s; seats fill from the back. A previous pangat of 16 sits nearest the exit and leaves in groups of 4; the hall opening is at the top, so without a low exit door they walk out through the line (CROSS_FLOW). Two fixed baskets (players can't build baskets, so one would be an unfixable bottleneck). A station's standing spot can't touch another's (otherwise people get boxed in). Budget ₹12,000, 3 min, targetSec 150, starCost ₹9,500 (cheapest clean: 3 shoe stands + 3 taps + hinged exit door = ₹9,000). Twist tested: one shoe stand + more taps still fails.
+- Mistri Ji (P5) speaks only through the game's existing quote card: his 1-line Hinglish brief (`mistri.brief` in level JSON), and after 2 failed runs in a row a "Mistri Ji ki salaah" nudge picked by what failed (`mistri.hints[code]`, else `default`). Hints nudge, never give the answer. No popups.
+- The journal is "Mistri Ji ki diary": one insight page per level (`insight` in level JSON: title, principle, real-world example, a real number, Mistri Ji quote), unlocked by failing then passing that level. The failure principle cards stay below it.
+- Personal-best ghost: the best passing design is saved and replayed (deterministic) beside the run as faint people. Off by default; "👻 Best run" toggle in the sim bar.
+- Sim bar progress text comes from `goalLabel` in level JSON (e.g. "🍽 {n}/{total} seated").
+- Dev builds: press U on level select to unlock/relock all levels.

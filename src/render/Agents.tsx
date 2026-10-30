@@ -31,7 +31,7 @@ export function SimRunner() {
   return null;
 }
 
-function interpolated(level: Level, a: Agent, alpha: number): [number, number, number] {
+export function interpolated(level: Level, a: Agent, alpha: number): [number, number, number] {
   const from = tileToWorld(level, ...a.pos);
   if (!a.next || a.state !== 'walking') return from;
   const to = tileToWorld(level, ...a.next);
@@ -126,6 +126,44 @@ export function AgentsLayer({ level }: { level: Level }) {
     <group>
       {Array.from({ length: count }, (_, i) => (
         <AgentView key={i} level={level} index={i} />
+      ))}
+    </group>
+  );
+}
+
+/** One faint person from the best run, gliding like the real ones. */
+function GhostView({ level, index }: { level: Level; index: number }) {
+  const group = useRef<Group>(null);
+  const look = useStore((s) => {
+    const a = s.ghostSim?.agents[index];
+    return a ? `${effectiveType(a)}|${a.state}|${a.id}` : '';
+  });
+  const [type, state, id] = look.split('|') as [Agent['type'], Agent['state'], string];
+  useFrame(() => {
+    const a = useStore.getState().ghostSim?.agents[index];
+    if (!a || !group.current) return;
+    const [x, , z] = interpolated(level, a, clock.acc / TICK_SEC);
+    group.current.position.set(x, 0, z);
+    group.current.rotation.y = Math.atan2(a.dir[0], a.dir[1]);
+  });
+  if (!look || state === 'done') return null;
+  const n = Number(id.slice(1));
+  return (
+    <group ref={group}>
+      <Person type={type} position={[0, 0, 0]} skin={n} phase={n * 1.7} walking={state === 'walking'} seated={state === 'seated'} ghost />
+    </group>
+  );
+}
+
+/** Personal-best ghost: the best passing run replayed beside this one. Off unless toggled in the sim bar. */
+export function BestRunGhosts({ level }: { level: Level }) {
+  const on = useStore((s) => s.showGhost);
+  const count = useStore((s) => s.ghostSim?.agents.length ?? 0);
+  if (!on) return null;
+  return (
+    <group>
+      {Array.from({ length: count }, (_, i) => (
+        <GhostView key={i} level={level} index={i} />
       ))}
     </group>
   );

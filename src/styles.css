@@ -395,3 +395,21 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .head-buttons { display: flex; gap: 10px; align-items: center; }
 .sound-toggle { padding: 10px 14px; }
 .checks li.info .mark { color: var(--ink-soft); font-size: 15px; }
+
+/* Mistri Ji in the quote card: same card, a small tag when he gives a hint. */
+.quote.salaah { border-color: var(--accent); }
+.salaah-tag {
+  display: inline-block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Mistri Ji ki diary pages */
+.diary-card p { flex: 0; }
+.diary-card .diary-example, .diary-card .diary-number { font-size: 14px; }
+.diary-card .diary-number { font-weight: 600; color: var(--ink); }
+.diary-by { font-family: inherit; font-size: 13px; color: var(--ink-soft); }

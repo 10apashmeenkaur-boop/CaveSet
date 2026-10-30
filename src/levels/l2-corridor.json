@@ -2,6 +2,24 @@
   "id": "l2-corridor",
   "title": "The Service Corridor",
   "brief": "The dining hall sits between kitchen and washing. Cut doors so crates can get across, without walking through people eating. Budget ₹16,000. Finish in 120s.",
+  "goalLabel": "📦 {n}/{total} delivered",
+  "mistri": {
+    "brief": "Langar chal raha hai. Sangat ke beech se crate nahi jaana chahiye.",
+    "hints": {
+      "DINING_DISTURBED": "Dekho sevadar hall mein kahan se ghus rahe hain.",
+      "NO_PATH": "Crate ko kahin se toh nikalna padega, na?",
+      "TOO_NARROW": "Crate wala banda kitna chauda hai? Pehle naap lo.",
+      "TIME_LIMIT": "Har chakkar ka har kadam ginta hai, puttar.",
+      "default": "Sevadar ka raasta aur sangat ki jagah alag rakho."
+    }
+  },
+  "insight": {
+    "title": "Front of house, back of house",
+    "principle": "Service routes should stay out of sight of the people being served.",
+    "example": "Hotels and restaurants hide service corridors behind the dining room, so trolleys and crates never pass between the tables.",
+    "number": "A comfortable service corridor is about 1.2 to 1.5 m wide.",
+    "quote": "Pangat mein crate nahi ghoomta, puttar. Peeche ka raasta banao."
+  },
   "grid": {
     "w": 24,
     "h": 14

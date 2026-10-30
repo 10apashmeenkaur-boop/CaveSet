@@ -3,7 +3,7 @@ import { findLevel } from '../levels';
 import { Scene } from '../render/Scene';
 import { useStore } from '../store';
 import { BudgetBar } from './BudgetBar';
-import { QuoteBanner } from './QuoteBanner';
+import { MistriCard } from './QuoteBanner';
 import { ResultsPanel } from './ResultsPanel';
 import { SimBar } from './SimBar';
 import { Toolbar } from './Toolbar';
@@ -48,7 +48,7 @@ export function GameScreen() {
       ) : (
         <div className="hud top-right">
           <BudgetBar level={level} />
-          <QuoteBanner />
+          <MistriCard level={level} />
         </div>
       )}
 
