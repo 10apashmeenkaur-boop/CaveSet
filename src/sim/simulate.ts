@@ -6,7 +6,6 @@ import {
   ELDERLY_STAIRS_COST,
   LINE_SQUEEZE_TICKS,
   RAMP_MAX_SLOPE,
-  RAMP_REST_TILES,
   ROLLBACK_AFTER_TILES,
   ROLLBACK_SPEED,
   RECENT_DECAY,
@@ -40,7 +39,7 @@ import {
   type World,
 } from './pathfinding';
 import { rand } from './rng';
-import { isSlope, slopeFactor, STAIRS, tooSteep } from './terrain';
+import { isSlope, railed, slopeFactor, STAIRS, tooSteep } from './terrain';
 import type { AgentType, Level, StationKind, Tile, Zone } from './types';
 
 type PendingSpawn = { tick: number; type: AgentType; from: string; to: string };
@@ -294,14 +293,13 @@ function plan(world: World, a: Agent, crowd?: Crowd): Agent {
 function planWheels(world: World, a: Agent, crowd?: Crowd): Agent {
   const cost = costFor(world, a.type);
   const chair = a.type === 'wheelchair';
-  const run = a.run ?? 0;
   const go = (path: Tile[], deadEnd?: StuckReason): Agent => ({ ...a, path, state: 'walking', stuckReason: undefined, deadEnd });
-  const proper: WheelRules = { lane: 2, maxRise: WHEEL_MAX_RISE, turns: chair ? 'turnable' : 'any', rest: chair ? RAMP_REST_TILES : Infinity };
-  const ok = findWheelPath(world, a.pos, a.dir, run, a.goal, proper, crowd, cost);
+  const proper: WheelRules = { lane: 2, maxRise: WHEEL_MAX_RISE, turns: chair ? 'turnable' : 'any' };
+  const ok = findWheelPath(world, a.pos, a.dir, a.goal, proper, crowd, cost);
   if (ok) return go(ok);
   // (Turning only on flat ground, so it doesn't swerve between the ramp's two halves.)
-  const attempt: WheelRules = { lane: 1, maxRise: Infinity, turns: 'flat', rest: Infinity };
-  const tried = findWheelPath(world, a.pos, a.dir, run, a.goal, attempt, crowd, cost);
+  const attempt: WheelRules = { lane: 1, maxRise: Infinity, turns: 'flat' };
+  const tried = findWheelPath(world, a.pos, a.dir, a.goal, attempt, crowd, cost);
   if (tried) return go(tried);
   const t = world.terrain!;
   const dist = (p: Tile) => Math.abs(p[0] - a.goal[0]) + Math.abs(p[1] - a.goal[1]);
@@ -312,7 +310,7 @@ function planWheels(world: World, a: Agent, crowd?: Crowd): Agent {
     const cut = onFoot.findIndex((tile, k) => !canStep(world, k ? onFoot[k - 1] : a.pos, tile, 1, 'wheel'));
     return go(cut < 0 ? onFoot : onFoot.slice(0, cut), 'no-access');
   }
-  return go(findWheelPath(world, a.pos, a.dir, run, best, attempt, undefined, cost) ?? [], 'no-access');
+  return go(findWheelPath(world, a.pos, a.dir, best, attempt, undefined, cost) ?? [], 'no-access');
 }
 
 /**
@@ -329,24 +327,23 @@ function wheelTrouble(world: World, a: Agent, nxt: Tile): StuckReason | null {
   if (!canStep(world, a.pos, nxt, 2, 'wheel')) return 'tight-turn';
   const uphill = dir[0] === t.dx[n] && dir[1] === t.dy[n];
   if (chair && uphill && tooSteep(t, n, WHEEL_MAX_RISE)) return 'too-steep';
-  if (chair && isSlope(t, n) && (a.run ?? 0) + 1 > RAMP_REST_TILES) return 'exhausted';
   return null;
 }
 
-/** After rolling on to a tile: count ramp tiles in a row; a trolley too far up a too-steep ramp starts rolling back. */
+/** After rolling on to a tile: track the ramp tiles since the last flat one; a trolley too far up a too-steep ramp starts rolling back. */
 function rolled(world: World, a: Agent): Agent {
   const t = world.terrain!;
   if (a.rolling) return a;
   const i = a.pos[1] * t.w + a.pos[0];
-  if (!isSlope(t, i)) return { ...a, run: 0, trail: [a.pos], steep: 0 };
+  if (!isSlope(t, i)) return { ...a, trail: [a.pos], steep: 0 };
   const uphill = a.dir[0] === t.dx[i] && a.dir[1] === t.dy[i];
   const steep = (a.steep ?? 0) + (uphill && tooSteep(t, i, WHEEL_MAX_RISE) ? 1 : 0);
   const trail = [...(a.trail ?? []), a.pos];
   if (a.type === 'trolley' && steep >= ROLLBACK_AFTER_TILES) {
     // Back down the way it came, still facing uphill, to the last flat tile.
-    return { ...a, run: (a.run ?? 0) + 1, trail, steep, rolling: true, path: trail.slice(0, -1).reverse() };
+    return { ...a, trail, steep, rolling: true, path: trail.slice(0, -1).reverse() };
   }
-  return { ...a, run: (a.run ?? 0) + 1, trail, steep };
+  return { ...a, trail, steep };
 }
 
 /** A trolley rolling back: nothing stops it; at the bottom it stays put. */
@@ -619,6 +616,10 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
     if (world.terrain && onWheels(a.type)) {
       a = rolled(world, a);
       if (a.rolling) return { ...a, progress: 0 };
+    }
+    if (world.terrain && a.type === 'elderly') {
+      const i = a.pos[1] * world.terrain.w + a.pos[0];
+      a.unrailed = isSlope(world.terrain, i) && !railed(world.terrain, i);
     }
     if (reached(world, a)) return arrive(world, { ...a, progress: 0 }, s, occ);
     if (!a.path.length) {

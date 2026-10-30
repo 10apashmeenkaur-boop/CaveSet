@@ -16,7 +16,7 @@ export type IncidentCode =
   | 'UNDERUSED_HALL'
   | 'RAMP_TOO_STEEP'
   | 'TROLLEY_ROLLBACK'
-  | 'NO_REST_LANDING'
+  | 'NO_HANDRAIL'
   | 'TIGHT_TURN'
   | 'NO_ACCESSIBLE_ROUTE';
 
@@ -102,10 +102,10 @@ export const PRINCIPLES: Record<IncidentCode, { title: string; principle: string
     principle: 'A heavy trolley on a steep ramp pulls back harder than anyone can push. Keep it to 1:12.',
     hint: 'Use 1:12 for the whole ramp the trolley takes.',
   },
-  NO_REST_LANDING: {
-    title: 'Give people a rest',
-    principle: 'Long ramps tire wheelchair users. Put a flat landing at least every 9 m of ramp.',
-    hint: 'Break the long ramp with a landing.',
+  NO_HANDRAIL: {
+    title: 'Something to hold on to',
+    principle: 'Older people need a handrail on every ramp and stair, all the way up.',
+    hint: 'Put a handrail along the ramp or stairs the elderly visitor uses.',
   },
   TIGHT_TURN: {
     title: 'Room to turn',
@@ -123,7 +123,6 @@ export const PRINCIPLES: Record<IncidentCode, { title: string; principle: string
 const RAMP_FAILS: Partial<Record<StuckReason, IncidentCode>> = {
   'too-steep': 'RAMP_TOO_STEEP',
   rollback: 'TROLLEY_ROLLBACK',
-  exhausted: 'NO_REST_LANDING',
   'tight-turn': 'TIGHT_TURN',
   'no-access': 'NO_ACCESSIBLE_ROUTE',
 };
@@ -131,7 +130,6 @@ const RAMP_FAILS: Partial<Record<StuckReason, IncidentCode>> = {
 const RAMP_TITLES: Partial<Record<IncidentCode, (who: string) => [string, string]>> = {
   RAMP_TOO_STEEP: (who) => ['The ramp was too steep', `${who} couldn’t push up the ramp. Steeper than 1:12 is too much.`],
   TROLLEY_ROLLBACK: (who) => ['A trolley rolled back down', `${who} got partway up the steep ramp and slid back to the bottom.`],
-  NO_REST_LANDING: (who) => ['No landing to rest on', `${who} ran out of strength after 15 tiles (9 m) of ramp with no flat landing.`],
   TIGHT_TURN: (who) => ['No room to turn', `${who} couldn’t turn here: a turn needs a 3×3 landing that the whole ramp meets.`],
   NO_ACCESSIBLE_ROUTE: (who) => ['No step-free way up', `${who} had no way up without steps.`],
 };
@@ -160,6 +158,7 @@ export function complaintOf(a: Agent, others: Map<string, Agent>, timeUp: boolea
   if (a.stuckReason === 'too-narrow') return 'TOO_NARROW';
   const ramp = a.stuckReason && RAMP_FAILS[a.stuckReason];
   if (ramp) return ramp;
+  if (a.unrailed) return 'NO_HANDRAIL';
   if (a.waitReason === 'swing' && a.waitTicks >= SWING_TICKS) return 'SWING_BLOCK';
   const b = a.blocker ? others.get(a.blocker) : undefined;
   if (a.waitReason === 'occupied' && a.waitTicks >= CROSS_FLOW_TICKS && crossing(a, b)) return 'CROSS_FLOW';
@@ -249,6 +248,13 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
         [inc.title, inc.evidence] = RAMP_TITLES[ramp]!(who);
         inc.evidence += ` (at ${where(inc.tiles[0])})`;
       }
+    }
+
+    if (a.unrailed) {
+      const inc = record(list, 'NO_HANDRAIL', d.tick, [a.pos], [a.id], 'global');
+      inc.count = inc.agents.length;
+      inc.title = 'Nothing to hold on to';
+      inc.evidence = `The elderly visitor had to climb ${plural(inc.tiles.length, 'tile')} of ramp or stairs without a handrail, at a quarter of their speed.`;
     }
 
     if (a.waitReason === 'swing' && a.waitTicks === SWING_TICKS) {

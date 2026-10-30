@@ -13,7 +13,7 @@ export type FailureCode = Extract<
   | 'UNDERUSED_HALL'
   | 'RAMP_TOO_STEEP'
   | 'TROLLEY_ROLLBACK'
-  | 'NO_REST_LANDING'
+  | 'NO_HANDRAIL'
   | 'TIGHT_TURN'
   | 'NO_ACCESSIBLE_ROUTE'
 >;
@@ -84,10 +84,10 @@ export const QUOTES: Record<FailureCode, string[]> = {
     'Pakdo, pakdo! Phisal gayi!',
     'Bori wapas neeche aa gayi!',
   ],
-  NO_REST_LANDING: [
-    'Bas, saans phool gayi.',
-    'Thoda rukne ki jagah toh do!',
-    'Itna lamba ramp? Thak gaya.',
+  NO_HANDRAIL: [
+    'I need something to hold on to.',
+    'Pakadne ko kuch toh do, beta.',
+    'Railing kahan hai, ji?',
   ],
   TIGHT_TURN: [
     'Yahan mudun kaise, ji?',
@@ -114,7 +114,7 @@ export const FAILURE_LABEL: Record<FailureCode, string> = {
   UNDERUSED_HALL: 'a sevadar, serving an empty pangat',
   RAMP_TOO_STEEP: 'a wheelchair sevadar, at a steep ramp',
   TROLLEY_ROLLBACK: 'a sevadar, chasing a runaway trolley',
-  NO_REST_LANDING: 'a wheelchair sevadar, halfway up',
+  NO_HANDRAIL: 'an elderly visitor, halfway up the ramp',
   TIGHT_TURN: 'a wheelchair sevadar, stuck at a corner',
   NO_ACCESSIBLE_ROUTE: 'a wheelchair sevadar, at the foot of the stairs',
 };

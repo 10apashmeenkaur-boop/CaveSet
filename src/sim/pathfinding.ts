@@ -209,11 +209,11 @@ export function findPath(world: World, from: Tile, to: Tile, width: 1 | 2, crowd
 /**
  * What a route on wheels must respect. lane: how wide a lane it needs (2 = the real chair or trolley; 1 to find where
  * a user would try to go). maxRise: steepest ramp (mm per tile). turns: where it may turn (a level 3×3 spot, any flat
- * tile, or anywhere). rest: most ramp tiles in a row before a flat rest spot.
+ * tile, or anywhere).
  */
-export type WheelRules = { lane: 1 | 2; maxRise: number; turns: 'turnable' | 'flat' | 'any'; rest: number };
+export type WheelRules = { lane: 1 | 2; maxRise: number; turns: 'turnable' | 'flat' | 'any' };
 
-/** Small binary heap on (f, order), for routes on wheels (their search space is bigger: tile × direction × ramp run). */
+/** Small binary heap on (f, order), for routes on wheels (their search space is bigger: tile × direction). */
 class Heap {
   private items: { s: number; f: number; o: number }[] = [];
   get size() {
@@ -256,14 +256,13 @@ class Heap {
 }
 
 /**
- * A* for a wheelchair or trolley, tracking which way it faces and how many ramp tiles it has rolled in a row.
- * Starts facing `dir` with `run` ramp tiles behind it. Returns the tiles after `from` up to `to`, or null.
+ * A* for a wheelchair or trolley, tracking which way it faces (turns may be restricted).
+ * Starts facing `dir`. Returns the tiles after `from` up to `to`, or null.
  */
 export function findWheelPath(
   world: World,
   from: Tile,
   dir: Tile,
-  run: number,
   to: Tile,
   rules: WheelRules,
   crowd?: Crowd,
@@ -271,16 +270,15 @@ export function findWheelPath(
 ): Tile[] | null {
   const t = world.terrain;
   const { w, h } = world.grid;
-  const runs = Number.isFinite(rules.rest) ? rules.rest + 1 : 1;
-  const sid = (i: number, d: number, r: number) => (i * 4 + d) * runs + r;
-  const total = w * h * 4 * runs;
+  const sid = (i: number, d: number) => i * 4 + d;
+  const total = w * h * 4;
   const g = new Float64Array(total).fill(Infinity);
   const came = new Int32Array(total).fill(-1);
   const closed = new Uint8Array(total);
   const heap = new Heap();
   let order = 0;
   const d0 = Math.max(0, DIRS.findIndex(([x, y]) => x === dir[0] && y === dir[1]));
-  const start = sid(from[1] * w + from[0], d0, Math.min(run, runs - 1));
+  const start = sid(from[1] * w + from[0], d0);
   g[start] = 0;
   heap.push({ s: start, f: Math.abs(to[0] - from[0]) + Math.abs(to[1] - from[1]), o: order++ });
 
@@ -288,15 +286,14 @@ export function findWheelPath(
     const { s } = heap.pop();
     if (closed[s]) continue;
     closed[s] = 1;
-    const r = s % runs;
-    const d = Math.floor(s / runs) % 4;
-    const i = Math.floor(s / runs / 4);
+    const d = s % 4;
+    const i = Math.floor(s / 4);
     const cx = i % w;
     const cy = Math.floor(i / w);
     if (cx === to[0] && cy === to[1]) {
       const path: Tile[] = [];
       for (let c = s; c !== start; c = came[c]) {
-        const ti = Math.floor(c / runs / 4);
+        const ti = Math.floor(c / 4);
         path.push([ti % w, Math.floor(ti / w)]);
       }
       return path.reverse();
@@ -310,10 +307,8 @@ export function findWheelPath(
       if (turning && t && rules.turns !== 'any' && (rules.turns === 'flat' ? isSlope(t, i) : !t.turnable[i])) continue;
       if (!canStep(world, [cx, cy], [nx, ny], rules.lane, 'wheel')) continue;
       if (t && tooSteep(t, n, rules.maxRise)) continue;
-      const nr = t && isSlope(t, n) ? r + 1 : 0;
-      if (nr > rules.rest) continue;
       if (crowd?.blocked?.has(key(nx, ny)) && (nx !== to[0] || ny !== to[1])) continue;
-      const ns = sid(n, nd, Math.min(nr, runs - 1));
+      const ns = sid(n, nd);
       if (closed[ns]) continue;
       let cost = g[s] + (tileCost?.(nx, ny) ?? 1) + (turning ? TURN_COST : 0);
       if (crowd) {

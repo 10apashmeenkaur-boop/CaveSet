@@ -132,20 +132,18 @@ export const STAIR_TILES = 4;
 export const RAMP_WIDTH_TILES = 2;
 /** Landings are 3×3 tiles (1.8 m square), enough for a wheelchair to turn (needs ~1.5 m). */
 export const LANDING_TILES = WHEELCHAIR_TURN_TILES;
-/** Rest landing at least every ~9 m of ramp = 15 tiles. */
-export const RAMP_REST_TILES = Math.floor(RAMP_LANDING_EVERY_M / TILE_M);
 /** Someone on foot can step up or down a lip this high; wheels need the edges to meet exactly. */
 export const STEP_UP_MAX_M = STAIR_MAX_RISER_M;
 
 /**
  * Speed on slopes, as a share of flat-ground speed (game estimates from watching people climb).
- * Elderly visitors tire quickly on stairs; a handrail helps them a little.
+ * An elderly visitor needs a handrail on any ramp or stairs: with one they walk a ramp at full speed (stairs still
+ * tire them); without one they creep along at a quarter speed.
  */
 export const SLOPE_SPEED = {
-  ramp: { walk: 0.85, elderly: 0.9, wheel: 0.7 },
-  stairs: { walk: 0.5, elderly: 0.25, elderlyRail: 0.4 },
-  /** With a handrail, an elderly visitor walks a ramp at full speed. */
-  rampRail: { elderly: 1 },
+  ramp: { walk: 0.85, wheel: 0.7, elderlyRail: 1 },
+  stairs: { walk: 0.5, elderlyRail: 0.4 },
+  elderlyNoRail: 0.25,
 } as const;
 /** Elderly visitors avoid stairs when they can: each stair tile counts as this many steps when they choose a route. */
 export const ELDERLY_STAIRS_COST = 12;

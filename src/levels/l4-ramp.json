@@ -1,7 +1,7 @@
 {
   "id": "l4-ramp",
   "title": "Ramp to the Roof",
-  "brief": "Sacks go up to roof storage, 1.2 m up: 6 carriers, 2 trolleys, a wheelchair sevadar and an elderly visitor. Everyone gets up. Budget ₹20,000.",
+  "brief": "Sacks go up to roof storage, 1.2 m up: 6 carriers, 2 trolleys, a wheelchair sevadar and an elderly visitor. Everyone gets up. Budget ₹24,000.",
   "goalLabel": "⬆ {n}/{total} on the roof",
   "mistri": {
     "brief": "Bori bhi upar jaayegi, wheelchair bhi. Jagah dekh ke banana.",
@@ -10,7 +10,7 @@
       "RAMP_TOO_STEEP": "Wheelchair kitni chadhai le sakti hai? Pehle naapo.",
       "TROLLEY_ROLLBACK": "Bhaari trolley dheemi dhalaan maangti hai.",
       "TIGHT_TURN": "Mudne ke liye poori jagah chahiye, kone mein nahi.",
-      "NO_REST_LANDING": "Lamba ramp? Beech mein saans lene do.",
+      "NO_HANDRAIL": "Bade-buzurg upar chadhte hue kya pakdenge?",
       "NO_PATH": "Zameen se chhat tak raasta judna chahiye.",
       "TIME_LIMIT": "Dekho kaun sabse dheere chal raha hai, aur kyon.",
       "default": "Pehle naapo: kitna lamba ramp chahiye, kitni jagah hai?"
@@ -38,10 +38,10 @@
     { "type": "wheelchair", "from": "yard", "to": "roof", "count": 1, "every": 1, "delay": 45 },
     { "type": "trolley", "from": "yard", "to": "roof", "count": 2, "every": 90, "delay": 75 }
   ],
-  "budget": 20000,
+  "budget": 24000,
   "timeLimitSec": 90,
   "targetSec": 65,
-  "starCost": 17000,
+  "starCost": 22000,
   "seed": 1,
   "allowedTools": ["ramp", "landing", "stairs", "handrail"]
 }

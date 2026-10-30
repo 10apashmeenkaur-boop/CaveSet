@@ -242,18 +242,17 @@ export const tooSteep = (t: Terrain, i: number, maxRise: number) => t.kind[i] ==
 
 /** Share of flat-ground speed on tile i for this kind of agent. */
 export function slopeFactor(t: Terrain, i: number, type: AgentType): number {
-  const railed = t.rail[i] === 1 || (t.sibling[i] >= 0 && t.rail[t.sibling[i]] === 1);
+  if (!isSlope(t, i)) return 1;
+  if (type === 'elderly' && !railed(t, i)) return SLOPE_SPEED.elderlyNoRail;
   if (t.kind[i] === RAMP) {
     if (type === 'wheelchair' || type === 'trolley') return SLOPE_SPEED.ramp.wheel;
-    if (type === 'elderly') return railed ? SLOPE_SPEED.rampRail.elderly : SLOPE_SPEED.ramp.elderly;
-    return SLOPE_SPEED.ramp.walk;
+    return type === 'elderly' ? SLOPE_SPEED.ramp.elderlyRail : SLOPE_SPEED.ramp.walk;
   }
-  if (t.kind[i] === STAIRS) {
-    if (type === 'elderly') return railed ? SLOPE_SPEED.stairs.elderlyRail : SLOPE_SPEED.stairs.elderly;
-    return SLOPE_SPEED.stairs.walk;
-  }
-  return 1;
+  return type === 'elderly' ? SLOPE_SPEED.stairs.elderlyRail : SLOPE_SPEED.stairs.walk;
 }
+
+/** A handrail on this tile, or on the other half of its ramp or stairs (one rail serves the full width). */
+export const railed = (t: Terrain, i: number) => t.rail[i] === 1 || (t.sibling[i] >= 0 && t.rail[t.sibling[i]] === 1);
 
 /** Height (mm) on the way from tile a to tile b, fraction f of the way: up to a's edge, then on from b's edge. */
 export function heightBetween(t: Terrain, a: Tile, b: Tile | null, f: number): number {

@@ -34,10 +34,10 @@ export type AgentState = 'walking' | 'waiting' | 'stuck' | 'seated' | 'done';
 export type Phase = 'deliver' | 'return';
 /**
  * no-path and too-narrow are final; jam means waited too long but still trying.
- * Level 4, all final: too-steep (wheelchair can't climb), rollback (trolley rolled back down), exhausted (no rest landing),
+ * Level 4, all final: too-steep (wheelchair can't climb), rollback (trolley rolled back down),
  * tight-turn (no 3×3 landing to turn on), no-access (no step-free way up at all).
  */
-export type StuckReason = 'no-path' | 'too-narrow' | 'jam' | 'too-steep' | 'rollback' | 'exhausted' | 'tight-turn' | 'no-access';
+export type StuckReason = 'no-path' | 'too-narrow' | 'jam' | 'too-steep' | 'rollback' | 'tight-turn' | 'no-access';
 /**
  * occupied: someone is standing where I need to go. swing: a door can't open because someone is in its swing.
  * yield: backed out of a doorway and waiting for the other carrier to pass.
@@ -86,14 +86,15 @@ export type Agent = {
   leaveAt?: number;
 
   // Ramp to the roof (Level 4) only, for people on wheels.
-  /** Ramp tiles rolled since the last flat tile, the tiles themselves, and how many of them were too steep. */
-  run?: number;
+  /** Ramp tiles rolled since the last flat tile, and how many of them were too steep. */
   trail?: Tile[];
   steep?: number;
   /** A trolley rolling back down a too-steep ramp. */
   rolling?: boolean;
   /** Following a route that ends short of the goal: stop there, for this reason. */
   deadEnd?: StuckReason;
+  /** An elderly visitor on a ramp or stairs with nothing to hold on to. */
+  unrailed?: boolean;
 };
 
 /** Going in (towards stations / a seat) vs. going out: when these block each other it's cross-flow. */

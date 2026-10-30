@@ -13,8 +13,11 @@ const ramp = (x: number, y: number, dx: 0 | 1 | -1, dy: 0 | 1 | -1, slope = 12):
   dx ? { tool: 'ramp', x, y, orient: 'v', swing: dx as 1 | -1, slope } : { tool: 'ramp', x, y, orient: 'h', swing: dy as 1 | -1, slope };
 const landing = (x: number, y: number): Draft => ({ tool: 'landing', x, y, orient: 'v', swing: 1 });
 
+const handrails = (y: number, xs: number[]) => xs.map((x): Draft => ({ tool: 'handrail', x, y, orient: 'v', swing: 1 }));
 /** Switchback: up east along rows 7-8, two landings to turn on, then up west along rows 5-6 to the roof. ₹16,800. */
 const SWITCHBACK = [...range(5, 16).map((x) => ramp(x, 7, 1, 0)), landing(18, 5), landing(18, 8), ...range(5, 16).map((x) => ramp(x, 5, -1, 0))];
+/** The same with a handrail along every piece (one rail serves the ramp's full width): ₹21,600, the cheapest clean design. */
+const RAILED = [...SWITCHBACK, ...handrails(8, range(5, 16)), ...handrails(5, range(5, 16))];
 const run = (items: Draft[]) => {
   const design = build(items);
   const sim = runToEnd(L4, design);
@@ -24,8 +27,8 @@ const stuck = (sim: ReturnType<typeof runToEnd>, type: string) => sim.agents.fil
 
 describe('Level 4: Ramp to the Roof', () => {
   it('is deterministic', () => {
-    const a = run(SWITCHBACK).sim;
-    const b = run(SWITCHBACK).sim;
+    const a = run(RAILED).sim;
+    const b = run(RAILED).sim;
     expect(a.tick).toBe(b.tick);
     expect(a.agents.map((x) => x.pos)).toEqual(b.agents.map((x) => x.pos));
   });
@@ -58,13 +61,25 @@ describe('Level 4: Ramp to the Roof', () => {
     expect(result.passed).toBe(false);
   });
 
-  it('a 1:12 switchback with landings passes with three stars', () => {
-    const { sim, result } = run(SWITCHBACK);
+  it('a 1:12 switchback with landings and handrails passes with three stars', () => {
+    const { sim, result } = run(RAILED);
     expect(sim.delivered).toBe(sim.totalTasks);
     expect(sim.incidents).toEqual([]);
     expect(result.passed).toBe(true);
-    expect(costOf(build(SWITCHBACK))).toBe(16800);
+    expect(costOf(build(RAILED))).toBe(21600);
     expect(result.stars).toBe(3);
+  });
+
+  it('without handrails the elderly visitor creeps up at a quarter speed and it fails', () => {
+    const { sim, codes, result } = run(SWITCHBACK);
+    expect(codes).toContain('NO_HANDRAIL');
+    expect(sim.incidents.find((i) => i.code === 'NO_HANDRAIL')!.agents).toEqual(sim.agents.filter((a) => a.type === 'elderly').map((a) => a.id));
+    expect(result.passed).toBe(false);
+  });
+
+  it('half the handrails is not enough', () => {
+    const { codes } = run([...SWITCHBACK, ...handrails(8, range(5, 16))]);
+    expect(codes).toContain('NO_HANDRAIL');
   });
 
   it('a second switchback (lower flight, different landings) also passes', () => {
@@ -73,15 +88,10 @@ describe('Level 4: Ramp to the Roof', () => {
       landing(18, 6),
       landing(18, 9),
       ...range(5, 16).map((x) => ramp(x, 5, -1, 0)),
+      ...handrails(9, range(5, 16)),
+      ...handrails(5, range(5, 16)),
     ]);
     expect(result.passed).toBe(true);
-  });
-
-  it('handrails cost more: the same switchback with them passes on two stars', () => {
-    const rails = range(5, 16).map((x): Draft => ({ tool: 'handrail', x, y: 8, orient: 'v', swing: 1 }));
-    const { result } = run([...SWITCHBACK, ...rails]);
-    expect(result.passed).toBe(true);
-    expect(result.stars).toBe(2);
   });
 
   it('the landings sit halfway up and the ramp meets the roof exactly', () => {
@@ -92,8 +102,9 @@ describe('Level 4: Ramp to the Roof', () => {
   });
 
   it('stairs only: people on foot get up, wheels have no way up', () => {
-    const { sim, codes } = run([{ tool: 'stairs', x: 8, y: 3, orient: 'v', swing: -1 }]);
+    const { sim, codes } = run([{ tool: 'stairs', x: 8, y: 3, orient: 'v', swing: -1 }, ...handrails(3, [8, 7, 6, 5])]);
     expect(codes).toContain('NO_ACCESSIBLE_ROUTE');
+    expect(codes).not.toContain('NO_HANDRAIL');
     expect(stuck(sim, 'wheelchair')).toEqual(['no-access']);
     expect(sim.agents.filter((a) => a.type === 'sack' || a.type === 'elderly').every((a) => a.state === 'done')).toBe(true);
   });
@@ -103,12 +114,6 @@ describe('Level 4: Ramp to the Roof', () => {
     expect(codes).toContain('TIGHT_TURN');
     expect(stuck(sim, 'wheelchair')).toEqual(['tight-turn']);
     expect(sim.agents.filter((a) => a.type === 'sack').every((a) => a.state === 'done')).toBe(true);
-  });
-
-  it('a wheelchair gives out after 15 tiles of ramp with no landing', () => {
-    const { sim, codes } = run(range(4, 19).map((x) => ramp(x, 9, 1, 0)));
-    expect(codes).toContain('NO_REST_LANDING');
-    expect(stuck(sim, 'wheelchair')).toEqual(['exhausted']);
   });
 
   it('build rules: not on the roof or in the yard; handrails go on ramps; erasing a ramp takes its handrail', () => {
