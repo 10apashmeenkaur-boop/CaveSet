@@ -19,4 +19,5 @@ Full plan: `PLAN.md`. Build milestone by milestone; commit after each working on
 - Dining hall is a soft no-walk: walkable at extra A* cost (DINING_COST), never hard-blocked. Stepping in raises DINING_DISTURBED and diners complain ("Bhaji, khaana kha rahe hain!").
 - Level 2 has fixed walls: kitchen/washing walls plus a brick ring around the dining hall with sangat entrances. Players cut doors (and may brick up entrances).
 - Level 1 budget is ₹7,500 (plan said ₹6,000, which made separate in/out flows unaffordable).
-- Crowds must never deadlock: head-on stand-offs squeeze past after SQUEEZE_TICKS; on a mutual block only the higher-id agent detours. Jams cost time and raise incidents instead.
+- Head-on stand-offs (after SQUEEZE_TICKS): two empty-handed people squeeze past; if a crate is involved one carrier backs out of the doorway (the one in it, else the higher id) and holds YIELD_HOLD_TICKS. On a mutual block only the higher-id agent detours.
+- Level 1 time limit is 60s. Invariant (tested): one shared double door FAILS on time, two double doors PASS.

@@ -11,8 +11,15 @@ export const TICKS_PER_SEC = 10;
 export const BASE_SPEED = 2;
 /** Waiting this long: look for another route around whoever is in the way. */
 export const REPATH_TICKS = 15;
-/** Two people blocking each other head-on for this long squeeze past each other (slowly, awkwardly). */
+/**
+ * A head-on stand-off this long gets resolved: two empty-handed people squeeze past each other;
+ * if a crate is involved one carrier backs out of the way instead.
+ */
 export const SQUEEZE_TICKS = 35;
+/** How long someone who backed off waits before trying again. */
+export const YIELD_HOLD_TICKS = 20;
+/** If the one who should back off is boxed in this long after the stand-off, the other one tries. */
+const YIELD_FALLBACK_TICKS = SQUEEZE_TICKS + 20;
 /** Waiting this long: step aside to let the other person through. */
 export const SIDESTEP_TICKS = 40;
 /** Waiting this long counts as stuck (but keeps trying). */
@@ -188,6 +195,47 @@ function wait(
   }
 }
 
+/** In a crate stand-off, who backs off: whoever is in the doorway, else the later arrival (higher id). */
+function yieldsTo(world: World, a: Agent, other: Agent): boolean {
+  const aIn = world.doors.has(key(a.pos[0], a.pos[1]));
+  const oIn = world.doors.has(key(other.pos[0], other.pos[1]));
+  if (aIn !== oIn) return aIn;
+  return idNum(a) > idNum(other);
+}
+
+/**
+ * Walk to the nearest free spot at least 2 steps away that is off the other person's route and not in a doorway,
+ * then hold there. Returns false if boxed in. Mutates `a`.
+ */
+function backOff(world: World, a: Agent, occ: Occupancy, other: Agent): boolean {
+  const width = widthOf(a);
+  const inTheirWay = new Set([other.pos, ...other.path.slice(0, 8)].map(([x, y]) => key(x, y)));
+  const parent = new Map<string, string | null>([[key(a.pos[0], a.pos[1]), null]]);
+  let frontier: Tile[] = [a.pos];
+  for (let depth = 1; depth <= 6 && frontier.length; depth++) {
+    const nextFrontier: Tile[] = [];
+    for (const cur of frontier) {
+      for (const [dx, dy] of DIRS) {
+        const n: Tile = [cur[0] + dx, cur[1] + dy];
+        const k = key(n[0], n[1]);
+        if (parent.has(k) || !canStep(world, cur, n, width) || othersAt(occ, footprint(world, n, width), a.id)) continue;
+        parent.set(k, key(cur[0], cur[1]));
+        if (depth >= 2 && !inTheirWay.has(k) && !world.doors.has(k)) {
+          const path: Tile[] = [];
+          for (let c: string | null = k; c && c !== key(a.pos[0], a.pos[1]); c = parent.get(c) ?? null) {
+            path.push(c.split(',').map(Number) as Tile);
+          }
+          Object.assign(a, { path: path.reverse(), retreat: true, state: 'waiting', waitReason: 'yield', waitTicks: 0, blocker: undefined });
+          return true;
+        }
+        nextFrontier.push(n);
+      }
+    }
+    frontier = nextFrontier;
+  }
+  return false;
+}
+
 /** Claim the next path tile if it's free. Returns false if the agent has to wait or is stuck. Mutates `a` and `occ`. */
 function tryTake(world: World, a: Agent, s: SimState, occ: Occupancy, before: Map<string, Agent>): boolean {
   const nxt = a.path[0];
@@ -198,10 +246,17 @@ function tryTake(world: World, a: Agent, s: SimState, occ: Occupancy, before: Ma
     return false;
   }
   const fp = footprint(world, nxt, widthOf(a));
-  // A long head-on stand-off ends with both squeezing past each other.
+  // Resolve a long head-on stand-off.
   const other = a.blocker ? before.get(a.blocker) : undefined;
-  const squeeze =
-    other && other.blocker === a.id && a.waitTicks >= SQUEEZE_TICKS && other.waitTicks >= SQUEEZE_TICKS ? other.id : undefined;
+  const standoff = other && other.blocker === a.id && a.waitTicks >= SQUEEZE_TICKS && other.waitTicks >= SQUEEZE_TICKS;
+  let squeeze: string | undefined;
+  if (standoff && widthOf(a) === 1 && widthOf(other) === 1) {
+    squeeze = other.id; // empty-handed: squeeze past
+  } else if (standoff) {
+    // A crate can't squeeze past anyone in a doorway: one of them backs out.
+    const mine = yieldsTo(world, a, other);
+    if ((mine || a.waitTicks >= YIELD_FALLBACK_TICKS) && backOff(world, a, occ, other)) return false;
+  }
   const blocker = othersAt(occ, fp, a.id, squeeze);
   if (blocker) {
     wait(world, a, s, occ, before, 'occupied', blocker, nxt);
@@ -228,14 +283,27 @@ function tryTake(world: World, a: Agent, s: SimState, occ: Occupancy, before: Ma
   return true;
 }
 
+function holdAfterRetreat(a: Agent, s: SimState): Agent {
+  return { ...a, retreat: false, holdUntil: s.tick + YIELD_HOLD_TICKS, state: 'waiting', waitReason: 'yield', progress: 0 };
+}
+
 function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Map<string, Agent>): Agent {
   if (prev.state === 'done') return prev;
   if (prev.state === 'stuck' && prev.stuckReason !== 'jam') return prev;
   let a: Agent = { ...prev };
 
+  // Backed off for someone else: wait, then plan afresh.
+  if (a.holdUntil !== undefined) {
+    if (s.tick < a.holdUntil) return a;
+    a.holdUntil = undefined;
+    a = plan(world, a);
+    if (a.state === 'stuck') return a;
+  }
+
   if (!a.next) {
     if (!a.path.length) {
       if (reached(a)) return arrive(world, { ...a, progress: 0 }, s);
+      if (a.retreat) return holdAfterRetreat(a, s);
       a = plan(world, a); // after a sidestep
       if (a.state === 'stuck') return a;
     }
@@ -252,7 +320,7 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
     if (reached(a)) return arrive(world, { ...a, progress: 0 }, s);
     if (!a.path.length) {
       a.progress = 0;
-      return a;
+      return a.retreat ? holdAfterRetreat(a, s) : a;
     }
     if (!tryTake(world, a, s, occ, before)) {
       a.progress = 0;

@@ -13,8 +13,11 @@ export type AgentState = 'walking' | 'waiting' | 'stuck' | 'done';
 export type Phase = 'deliver' | 'return';
 /** no-path and too-narrow are final; jam means waited too long but still trying. */
 export type StuckReason = 'no-path' | 'too-narrow' | 'jam';
-/** occupied: someone is standing where I need to go. swing: a door can't open because someone is in its swing. */
-export type WaitReason = 'occupied' | 'swing';
+/**
+ * occupied: someone is standing where I need to go. swing: a door can't open because someone is in its swing.
+ * yield: backed out of a doorway and waiting for the other carrier to pass.
+ */
+export type WaitReason = 'occupied' | 'swing' | 'yield';
 
 export type Agent = {
   id: string;
@@ -36,6 +39,9 @@ export type Agent = {
   stuckReason?: StuckReason;
   /** Last movement direction, for facing. */
   dir: Tile;
+  /** Walking out of the way to let someone through (then holds until holdUntil). */
+  retreat?: boolean;
+  holdUntil?: number;
   /** What they're complaining about right now (speech bubble). */
   complaint?: IncidentCode;
 };

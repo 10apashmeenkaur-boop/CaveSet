@@ -59,3 +59,17 @@ describe('failure detectors', () => {
     for (const c of ['NO_PATH', 'TOO_NARROW', 'TIME_LIMIT', 'SWING_BLOCK'] as const) expect(found).not.toContain(c);
   });
 });
+
+describe('level 1 lesson: separate the flows', () => {
+  const doors = (...ys: number[]) => onWall(l1, 8, ...ys.map((y) => ({ tool: 'door2' as const, y })));
+
+  it.each([1, 2, 3])('one shared double door fails on time (seed %i)', (seed) => {
+    const s = runToEnd(l1, doors(4), seed);
+    expect(s.timeUp).toBe(true);
+    expect(s.incidents.map((i) => i.code)).toEqual(expect.arrayContaining(['HEAD_ON_JAM', 'TIME_LIMIT']));
+  });
+
+  it.each([1, 2, 3])('two double doors pass (seed %i)', (seed) => {
+    expect(runToEnd(l1, doors(2, 6), seed).finished).toBe(true);
+  });
+});
