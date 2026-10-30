@@ -12,6 +12,7 @@ export const COLORS = {
   swing: '#ff8a2a',
   hover: '#23395b',
   editable: '#ffd166',
+  editableEdge: '#ff9f1c',
   oneway: '#2fb36b',
   slab: '#d8cfc3',
   counter: '#d9a46c',

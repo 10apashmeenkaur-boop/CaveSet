@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
-import { checkPlace, TOOL_INFO, type BuildTool } from '../sim/design';
+import { TOOL_INFO, type BuildTool } from '../sim/design';
 import type { Level, ToolId } from '../sim/types';
-import { draftFor, orientationOf, useStore } from '../store';
+import { orientationOf, resolveDraft, useStore } from '../store';
 
 const ICON: Record<ToolId, string> = {
   wall: '🧱',
@@ -38,8 +38,8 @@ export function Toolbar({ level }: { level: Level }) {
   // Why the ghost is red, if it is.
   let blocked: string | null = null;
   if (hover && tool !== 'eraser') {
-    const check = checkPlace(level, design, draftFor(tool, hover[0], hover[1], orientIdx));
-    if (!check.ok) blocked = check.reason;
+    const r = resolveDraft(level, design, tool, hover[0], hover[1], orientIdx);
+    if (r.relevant && !r.check.ok) blocked = r.check.reason;
   }
 
   return (

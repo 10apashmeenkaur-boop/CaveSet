@@ -355,3 +355,39 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 @media (max-width: 900px) {
   .results { top: auto; height: 55vh; }
 }
+
+/* Onboarding */
+.tutorial-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transform: translateY(-62%);
+  font-family: 'Fredoka', system-ui, sans-serif;
+  user-select: none;
+}
+.tutorial-hint span:first-child {
+  background: var(--accent);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 var(--ink);
+}
+.tutorial-arrow { font-size: 30px; color: var(--accent); text-shadow: 0 2px 0 var(--ink); animation: bob 0.8s ease-in-out infinite alternate; }
+@keyframes bob { from { transform: translateY(-4px); } to { transform: translateY(6px); } }
+.flow-label {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid;
+  border-radius: 999px;
+  padding: 1px 10px;
+  white-space: nowrap;
+  user-select: none;
+}

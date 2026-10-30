@@ -1,11 +1,11 @@
 import type { ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { buildGrid, checkPlace, doorAt, isEditable, itemAt, itemTiles, snapSign, TOOL_INFO } from '../sim/design';
+import { buildGrid, doorAt, itemAt, itemTiles, TOOL_INFO } from '../sim/design';
 import { getCell } from '../sim/grid';
 import type { Level } from '../sim/types';
-import { draftFor, useStore } from '../store';
+import { resolveDraft, useStore } from '../store';
 import { tileToWorld } from './coords';
-import { DoorItem, SignItem, WALL_H, WallBlock } from './Items';
+import { DoorItem, SignItem, WallBlock } from './Items';
 import { COLORS } from './palette';
 
 /** Every wall tile (fixed + placed) and every placed door. */
@@ -21,19 +21,6 @@ export function DesignLayer({ level }: { level: Level }) {
       {walls.map(([x, y]) => (
         <WallBlock key={`${x},${y}`} position={tileToWorld(level, x, y)} />
       ))}
-      {/* When only part of the site is buildable, mark the editable wall tops. */}
-      {level.editableTiles !== 'all' &&
-        walls
-          .filter(([x, y]) => isEditable(level, x, y))
-          .map(([x, y]) => {
-            const [wx, , wz] = tileToWorld(level, x, y);
-            return (
-              <mesh key={`e${x},${y}`} position={[wx, WALL_H + 0.005, wz]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[0.8, 0.8]} />
-                <meshBasicMaterial color={COLORS.editable} transparent opacity={0.85} />
-              </mesh>
-            );
-          })}
       {design.items
         .filter((it) => TOOL_INFO[it.tool].door)
         .map((it) => (
@@ -77,15 +64,12 @@ export function GhostLayer({ level }: { level: Level }) {
     );
   }
 
-  const draft = snapSign(design, draftFor(tool, x, y, orientIdx));
-  const ghost = checkPlace(level, design, draft).ok ? 'ok' : 'bad';
+  const { draft, check, relevant } = resolveDraft(level, design, tool, x, y, orientIdx);
+  if (!relevant) return null; // nothing to build here: no ghost, no red
+  const ghost = check.ok ? 'ok' : 'bad';
   if (TOOL_INFO[tool].sign) {
     const door = doorAt(design, x, y);
-    return door ? (
-      <SignItem level={level} door={door} arrow={draft.swing} ghost={ghost} />
-    ) : (
-      <TileOutline level={level} x={x} y={y} color="#e5675a" />
-    );
+    return door ? <SignItem level={level} door={door} arrow={draft.swing} ghost={ghost} /> : null;
   }
   return (
     <group>
