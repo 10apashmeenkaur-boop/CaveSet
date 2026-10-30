@@ -2,7 +2,7 @@ import { speedOf, widthOf, type Agent, type WaitReason } from './agents';
 import type { Design } from './design';
 import { getCell } from './grid';
 import { complaintOf, detect, type Incident } from './failures';
-import { canStep, DIRS, findPath, isDining, key, makeWorld, type World } from './pathfinding';
+import { canStep, DIRS, findPath, isDining, key, makeWorld, type Crowd, type World } from './pathfinding';
 import { rand } from './rng';
 import type { AgentType, Level, Tile, Zone } from './types';
 
@@ -16,6 +16,8 @@ export const REPATH_TICKS = 15;
  * if a crate is involved one carrier backs out of the way instead.
  */
 export const SQUEEZE_TICKS = 35;
+/** Per tick, recent waiting fades by this factor (about a 2s half-life). */
+const RECENT_DECAY = 0.97;
 /** How long someone who backed off waits before trying again. */
 export const YIELD_HOLD_TICKS = 20;
 /** If the one who should back off is boxed in this long after the stand-off, the other one tries. */
@@ -38,6 +40,8 @@ export type SimState = {
   totalTasks: number;
   /** Total ticks people spent waiting on each tile (row-major), for the congestion heatmap. */
   heat: number[];
+  /** Recent waiting per tile, decaying each tick. Routes avoid where people are queueing right now. */
+  recent: number[];
   incidents: Incident[];
   /** Recent steps onto dining tiles, newest last (diners complain about these). */
   disturbances: { tile: Tile; tick: number; agent: string }[];
@@ -67,6 +71,7 @@ export function initSim(level: Level, seed = 1): SimState {
     delivered: 0,
     totalTasks,
     heat: new Array(level.grid.w * level.grid.h).fill(0),
+    recent: new Array(level.grid.w * level.grid.h).fill(0),
     incidents: [],
     disturbances: [],
     finished: false,
@@ -114,23 +119,31 @@ function occupancy(world: World, agents: Agent[]): Occupancy {
   return occ;
 }
 
+/** The crowd as seen by one person (everyone but themselves). */
+function crowdFor(s: SimState, occ: Occupancy, self: string): Crowd {
+  const occupied = new Set<string>();
+  for (const [k, id] of occ) if (id !== self) occupied.add(k);
+  return { occupied, recent: s.recent };
+}
+
 const idNum = (a: Agent) => Number(a.id.slice(1));
 const same = (a: Tile, b: Tile) => a[0] === b[0] && a[1] === b[1];
 /** Goals are on a counter/sink column: reaching the column anywhere counts, so people don't queue for one exact tile. */
 const reached = (a: Agent) => a.pos[0] === a.goal[0];
 
 /** Plan a route. If the agent is too wide for every route, it heads for the narrow one and gets stuck there. */
-function plan(world: World, a: Agent): Agent {
-  const route = findPath(world, a.pos, a.goal, widthOf(a)) ?? (widthOf(a) === 2 ? findPath(world, a.pos, a.goal, 1) : null);
+function plan(world: World, a: Agent, crowd?: Crowd): Agent {
+  const route =
+    findPath(world, a.pos, a.goal, widthOf(a), crowd) ?? (widthOf(a) === 2 ? findPath(world, a.pos, a.goal, 1, crowd) : null);
   if (!route) return { ...a, path: [], state: 'stuck', stuckReason: 'no-path' };
   return { ...a, path: route, state: 'walking', stuckReason: undefined };
 }
 
-function arrive(world: World, a: Agent, s: SimState): Agent {
+function arrive(world: World, a: Agent, s: SimState, occ: Occupancy): Agent {
   if (a.phase === 'deliver') {
     if (a.type === 'elderly') return { ...a, state: 'done' };
     s.delivered++;
-    return plan(world, { ...a, carrying: false, phase: 'return', goal: a.home });
+    return plan(world, { ...a, carrying: false, phase: 'return', goal: a.home }, crowdFor(s, occ, a.id));
   }
   return { ...a, state: 'done' };
 }
@@ -158,6 +171,7 @@ function wait(
   a.waitReason = reason;
   a.blocker = blocker;
   s.heat[a.pos[1] * world.grid.w + a.pos[0]]++;
+  s.recent[a.pos[1] * world.grid.w + a.pos[0]]++;
   if (a.waitTicks >= STUCK_TICKS) {
     a.state = 'stuck';
     a.stuckReason = 'jam';
@@ -168,9 +182,8 @@ function wait(
   const holdsGround = other?.blocker === a.id && idNum(a) < idNum(other);
 
   if (a.waitTicks % REPATH_TICKS === 0 && !holdsGround) {
-    // Try a route around everyone currently standing still in the way.
-    const avoid = new Set([...occ].filter(([, id]) => id !== a.id).map(([k]) => k));
-    const detour = findPath(world, a.pos, a.goal, widthOf(a), avoid);
+    // Re-route with the crowd in mind: a less busy door is worth some extra steps.
+    const detour = findPath(world, a.pos, a.goal, widthOf(a), crowdFor(s, occ, a.id));
     if (detour) a.path = detour;
   }
 
@@ -296,15 +309,15 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
   if (a.holdUntil !== undefined) {
     if (s.tick < a.holdUntil) return a;
     a.holdUntil = undefined;
-    a = plan(world, a);
+    a = plan(world, a, crowdFor(s, occ, a.id));
     if (a.state === 'stuck') return a;
   }
 
   if (!a.next) {
     if (!a.path.length) {
-      if (reached(a)) return arrive(world, { ...a, progress: 0 }, s);
+      if (reached(a)) return arrive(world, { ...a, progress: 0 }, s, occ);
       if (a.retreat) return holdAfterRetreat(a, s);
-      a = plan(world, a); // after a sidestep
+      a = plan(world, a, crowdFor(s, occ, a.id)); // after a sidestep
       if (a.state === 'stuck') return a;
     }
     if (!tryTake(world, a, s, occ, before)) return a;
@@ -317,7 +330,7 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
     a.pos = a.next;
     a.next = null;
     if (isDining(world, a.pos[0], a.pos[1])) s.disturbances.push({ tile: a.pos, tick: s.tick, agent: a.id });
-    if (reached(a)) return arrive(world, { ...a, progress: 0 }, s);
+    if (reached(a)) return arrive(world, { ...a, progress: 0 }, s, occ);
     if (!a.path.length) {
       a.progress = 0;
       return a.retreat ? holdAfterRetreat(a, s) : a;
@@ -339,6 +352,7 @@ export function step(level: Level, world: World, prev: SimState): SimState {
     pending: [...prev.pending],
     agents: [...prev.agents],
     heat: [...prev.heat],
+    recent: prev.recent.map((v) => v * RECENT_DECAY),
     disturbances: prev.disturbances.filter((d) => d.tick > prev.tick - 30),
   };
   const occ = occupancy(world, s.agents);
@@ -371,7 +385,7 @@ export function step(level: Level, world: World, prev: SimState): SimState {
       state: 'walking',
       waitTicks: 0,
       dir,
-    });
+    }, crowdFor(s, occ, ''));
     for (const [x, y] of fp) occ.set(key(x, y), agent.id);
     s.agents.push(agent);
   }

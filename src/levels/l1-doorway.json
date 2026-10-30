@@ -17,5 +17,5 @@
   "budget": 7500,
   "timeLimitSec": 60,
   "targetSec": 50,
-  "allowedTools": ["door1", "door2", "slide1", "slide2"]
+  "allowedTools": ["door1", "door2", "slide1", "slide2", "oneway"]
 }

@@ -4,7 +4,7 @@ import type { Level, Tile, ToolId } from './types';
 export type BuildTool = Exclude<ToolId, 'eraser'>;
 /** Axis a door's width runs along: 'v' = along y (sits in a vertical wall, people pass in x). */
 export type Orient = 'h' | 'v';
-/** Which side of the door a hinged leaf swings into: +1 = +x / +y. */
+/** Which side of the door a hinged leaf swings into: +1 = +x / +y. For a one-way sign: the direction people may pass. */
 export type Side = 1 | -1;
 
 export type Placed = { id: number; tool: BuildTool; x: number; y: number; orient: Orient; swing: Side };
@@ -13,13 +13,16 @@ export type Draft = Omit<Placed, 'id'>;
 
 export const EMPTY_DESIGN: Design = { items: [], nextId: 1 };
 
-export const TOOL_INFO: Record<BuildTool, { name: string; cost: number; width: 1 | 2; door: boolean; hinged: boolean }> = {
+export const TOOL_INFO: Record<BuildTool, { name: string; cost: number; width: 1 | 2; door: boolean; hinged: boolean; sign?: boolean }> = {
   wall: { name: 'Brick wall', cost: 500, width: 1, door: false, hinged: false },
   door1: { name: 'Hinged door', cost: 2000, width: 1, door: true, hinged: true },
   door2: { name: 'Double door', cost: 3500, width: 2, door: true, hinged: true },
   slide1: { name: 'Sliding door', cost: 3000, width: 1, door: true, hinged: false },
   slide2: { name: 'Wide sliding door', cost: 5000, width: 2, door: true, hinged: false },
+  oneway: { name: 'One-way sign', cost: 200, width: 1, door: false, hinged: false, sign: true },
 };
+
+const isSign = (it: Draft) => !!TOOL_INFO[it.tool].sign;
 
 const key = (x: number, y: number) => `${x},${y}`;
 
@@ -50,8 +53,30 @@ export function isEditable(level: Level, x: number, y: number): boolean {
   return level.editableTiles === 'all';
 }
 
+const covers = (it: Draft, x: number, y: number) => itemTiles(it).some(([tx, ty]) => tx === x && ty === y);
+
+/** The door (not wall, not sign) covering (x, y). */
+export function doorAt(design: Design, x: number, y: number): Placed | undefined {
+  return design.items.find((it) => TOOL_INFO[it.tool].door && covers(it, x, y));
+}
+
+/** The one-way sign hung on this door, if any. Signs sit on their door's first tile. */
+export function signOn(design: Design, door: Draft): Placed | undefined {
+  return design.items.find((it) => isSign(it) && it.x === door.x && it.y === door.y);
+}
+
+/** What the eraser would hit at (x, y): a sign before the door it hangs on. */
 export function itemAt(design: Design, x: number, y: number): Placed | undefined {
-  return design.items.find((it) => itemTiles(it).some(([tx, ty]) => tx === x && ty === y));
+  const door = doorAt(design, x, y);
+  if (door) return signOn(design, door) ?? door;
+  return design.items.find((it) => !isSign(it) && covers(it, x, y));
+}
+
+/** A sign draft snaps to the door under it: same anchor tile and axis, keeping its arrow direction. */
+export function snapSign(design: Design, draft: Draft): Draft {
+  if (!isSign(draft)) return draft;
+  const door = doorAt(design, draft.x, draft.y);
+  return door ? { ...draft, x: door.x, y: door.y, orient: door.orient } : draft;
 }
 
 export type PlaceCheck = { ok: true } | { ok: false; reason: string };
@@ -60,8 +85,15 @@ export function checkPlace(level: Level, design: Design, draft: Draft): PlaceChe
   const info = TOOL_INFO[draft.tool];
   if (!level.allowedTools.includes(draft.tool)) return { ok: false, reason: `${info.name}s aren't allowed in this level.` };
 
+  if (info.sign) {
+    const door = doorAt(design, draft.x, draft.y);
+    if (!door) return { ok: false, reason: 'Hang the sign on a door.' };
+    if (signOn(design, door)) return { ok: false, reason: 'This door already has a sign. Erase it to change it.' };
+    return { ok: true };
+  }
+
   const base = gridFromLevel(level);
-  const taken = new Set(design.items.flatMap((it) => itemTiles(it).map(([x, y]) => key(x, y))));
+  const taken = new Set(design.items.filter((it) => !isSign(it)).flatMap((it) => itemTiles(it).map(([x, y]) => key(x, y))));
 
   for (const [x, y] of itemTiles(draft)) {
     if (!inBounds(base, x, y)) return { ok: false, reason: 'That runs off the edge of the site.' };
@@ -82,21 +114,25 @@ export function checkPlace(level: Level, design: Design, draft: Draft): PlaceChe
   return { ok: true };
 }
 
-export function place(level: Level, design: Design, draft: Draft): Design {
+export function place(level: Level, design: Design, raw: Draft): Design {
+  const draft = snapSign(design, raw);
   if (!checkPlace(level, design, draft).ok) return design;
   return { items: [...design.items, { ...draft, id: design.nextId }], nextId: design.nextId + 1 };
 }
 
-/** Remove whatever covers (x, y). Design mode refunds 100%, so cost just drops. */
+/** Remove whatever covers (x, y); a removed door takes its sign with it. Design mode refunds 100%. */
 export function eraseAt(design: Design, x: number, y: number): Design {
   const hit = itemAt(design, x, y);
-  return hit ? { ...design, items: design.items.filter((it) => it !== hit) } : design;
+  if (!hit) return design;
+  const sign = TOOL_INFO[hit.tool].door ? signOn(design, hit) : undefined;
+  return { ...design, items: design.items.filter((it) => it !== hit && it !== sign) };
 }
 
 /** Level grid with the player's design applied. Doors cut through fixed walls. */
 export function buildGrid(level: Level, design: Design): Grid {
   const grid = gridFromLevel(level);
   for (const it of design.items) {
+    if (isSign(it)) continue;
     const cell = it.tool === 'wall' ? 'wall' : 'door';
     for (const [x, y] of itemTiles(it)) grid.cells[idx(grid, x, y)] = cell;
   }

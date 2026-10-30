@@ -1,5 +1,6 @@
-import { DoubleSide } from 'three';
+import { DoubleSide, Shape } from 'three';
 import { itemTiles, TOOL_INFO, type Draft } from '../sim/design';
+import { useMemo } from 'react';
 import type { Level } from '../sim/types';
 import { brickTexture } from './brick';
 import { tileToWorld } from './coords';
@@ -132,6 +133,39 @@ export function DoorItem({ level, item, ghost }: { level: Level; item: Draft; gh
           </mesh>
         </>
       )}
+    </group>
+  );
+}
+
+/** Flat arrow on the doorway floor: people may only pass this way. */
+export function SignItem({ level, door, arrow, ghost }: { level: Level; door: Draft; arrow: 1 | -1; ghost?: Ghost }) {
+  const shape = useMemo(() => {
+    // Points along +x in its own plane.
+    const s = new Shape();
+    s.moveTo(-0.75, -0.14);
+    s.lineTo(0.15, -0.14);
+    s.lineTo(0.15, -0.36);
+    s.lineTo(0.75, 0);
+    s.lineTo(0.15, 0.36);
+    s.lineTo(0.15, 0.14);
+    s.lineTo(-0.75, 0.14);
+    s.closePath();
+    return s;
+  }, []);
+  const tiles = itemTiles(door);
+  const a = tileToWorld(level, ...tiles[0]);
+  const b = tileToWorld(level, ...tiles[tiles.length - 1]);
+  const [dx, dz] = door.orient === 'v' ? [arrow, 0] : [0, arrow];
+  const color = ghost === 'bad' ? '#e5675a' : COLORS.oneway;
+  // Drawn twice: on the floor, and on top of the doorway where the iso camera always sees it.
+  return (
+    <group position={[(a[0] + b[0]) / 2, 0, (a[2] + b[2]) / 2]} rotation={[0, Math.atan2(-dz, dx), 0]}>
+      {[0.035, WALL_H + 0.03].map((y) => (
+        <mesh key={y} position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={TOOL_INFO[door.tool].width === 2 ? 1.25 : 1}>
+          <shapeGeometry args={[shape]} />
+          <meshBasicMaterial color={color} transparent opacity={ghost ? 0.55 : 0.95} side={DoubleSide} depthWrite={false} />
+        </mesh>
+      ))}
     </group>
   );
 }

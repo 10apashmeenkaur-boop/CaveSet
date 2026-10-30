@@ -1,11 +1,11 @@
 import type { ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { buildGrid, checkPlace, isEditable, itemAt, itemTiles, TOOL_INFO } from '../sim/design';
+import { buildGrid, checkPlace, doorAt, isEditable, itemAt, itemTiles, snapSign, TOOL_INFO } from '../sim/design';
 import { getCell } from '../sim/grid';
 import type { Level } from '../sim/types';
 import { draftFor, useStore } from '../store';
 import { tileToWorld } from './coords';
-import { DoorItem, WALL_H, WallBlock } from './Items';
+import { DoorItem, SignItem, WALL_H, WallBlock } from './Items';
 import { COLORS } from './palette';
 
 /** Every wall tile (fixed + placed) and every placed door. */
@@ -39,6 +39,12 @@ export function DesignLayer({ level }: { level: Level }) {
         .map((it) => (
           <DoorItem key={it.id} level={level} item={it} />
         ))}
+      {design.items
+        .filter((it) => TOOL_INFO[it.tool].sign)
+        .map((it) => {
+          const door = doorAt(design, it.x, it.y);
+          return door ? <SignItem key={it.id} level={level} door={door} arrow={it.swing} /> : null;
+        })}
     </group>
   );
 }
@@ -71,8 +77,16 @@ export function GhostLayer({ level }: { level: Level }) {
     );
   }
 
-  const draft = draftFor(tool, x, y, orientIdx);
+  const draft = snapSign(design, draftFor(tool, x, y, orientIdx));
   const ghost = checkPlace(level, design, draft).ok ? 'ok' : 'bad';
+  if (TOOL_INFO[tool].sign) {
+    const door = doorAt(design, x, y);
+    return door ? (
+      <SignItem level={level} door={door} arrow={draft.swing} ghost={ghost} />
+    ) : (
+      <TileOutline level={level} x={x} y={y} color="#e5675a" />
+    );
+  }
   return (
     <group>
       {itemTiles(draft).map(([tx, ty]) => (

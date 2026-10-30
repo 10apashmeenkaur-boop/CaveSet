@@ -24,7 +24,7 @@ export const SANDBOX: Level = {
   ],
   budget: Infinity,
   timeLimitSec: 0,
-  allowedTools: ['wall', 'door1', 'door2', 'slide1', 'slide2'],
+  allowedTools: ['wall', 'door1', 'door2', 'slide1', 'slide2', 'oneway'],
 };
 
 export function findLevel(id: string): Level | undefined {

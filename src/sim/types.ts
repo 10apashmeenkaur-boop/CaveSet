@@ -13,7 +13,7 @@ export type SpawnRule = {
   delay?: number;
 };
 
-export type ToolId = 'wall' | 'door1' | 'door2' | 'slide1' | 'slide2' | 'eraser';
+export type ToolId = 'wall' | 'door1' | 'door2' | 'slide1' | 'slide2' | 'oneway' | 'eraser';
 
 export type Level = {
   id: string;
