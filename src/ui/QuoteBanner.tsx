@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
-import { pickQuote, QUOTES } from './quotes';
+import { FAILURE_LABEL, pickQuote, type FailureCode } from './quotes';
 
-export function QuoteBanner({ screen }: { screen: keyof typeof QUOTES }) {
-  // New quote each time the screen mounts.
-  const q = useMemo(() => pickQuote(screen), [screen]);
+export function QuoteBanner({ codes }: { codes?: FailureCode[] }) {
+  // New quote each time the banner mounts.
+  const q = useMemo(() => pickQuote(codes), [codes]);
   return (
     <figure className="quote">
       <blockquote>“{q.text}”</blockquote>
-      <figcaption>— {q.who}</figcaption>
+      <figcaption>— a sevadar, {FAILURE_LABEL[q.code]}</figcaption>
     </figure>
   );
 }

@@ -15,4 +15,4 @@ Full plan: `PLAN.md`. Build milestone by milestone; commit after each working on
 - Characters: generic cartoon bobble-heads (round body, big head, dot eyes), bouncy walk, no limbs. Shirt color = role. No cultural attire.
 - Screens: Level select, Game view, Design Journal. (No title menu, no separate brief screen — brief lives in the game HUD.)
 - Look: soft pastel cartoon world + blueprint-style UI panels (grid-paper, navy ink, handwritten accents).
-- Every screen shows a rotating complaint quote from a fed-up character (`src/ui/quotes.ts`), witty and a bit dramatic.
+- Every screen shows a complaint quote (`src/ui/quotes.ts`): short (<8 words), casual, light Hinglish, how real sevadars talk. Each quote belongs to a failure code (TOO_NARROW, HEAD_ON_JAM, SWING_BLOCK, NO_PATH, TIME_LIMIT); M5 speech bubbles reuse them.

@@ -25,7 +25,7 @@ export function LevelSelect() {
         </button>
       </header>
 
-      <QuoteBanner screen="levels" />
+      <QuoteBanner />
 
       <h2 className="section-title">Stage 1 · The Langar Hall Service Path</h2>
       <div className="cards">

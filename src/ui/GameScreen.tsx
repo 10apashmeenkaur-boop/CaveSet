@@ -22,7 +22,7 @@ export function GameScreen() {
       </div>
 
       <div className="hud bottom-left">
-        <QuoteBanner screen="game" />
+        <QuoteBanner />
       </div>
 
       <div className="hud bottom-right blueprint hint">Drag to pan · scroll to zoom</div>

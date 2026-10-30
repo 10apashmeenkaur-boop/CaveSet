@@ -30,7 +30,7 @@ export function Journal() {
         </button>
       </header>
 
-      <QuoteBanner screen="journal" />
+      <QuoteBanner />
 
       <div className="cards">
         {PRINCIPLES.map((p) =>
