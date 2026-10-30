@@ -1,5 +1,6 @@
 import type { IncidentCode } from './failures';
-import { TICKS_PER_SEC, type SimState } from './simulate';
+import { TICKS_PER_SEC } from './constants';
+import type { SimState } from './simulate';
 import type { Level } from './types';
 
 /** Incidents that mean the job wasn't done properly, even if everything arrived. */

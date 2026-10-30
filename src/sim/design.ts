@@ -1,3 +1,4 @@
+import { DOUBLE_DOOR_TILES, PERSON_TILES, SINGLE_DOOR_TILES } from './constants';
 import { getCell, gridFromLevel, idx, inBounds, type Grid } from './grid';
 import type { Level, Tile, ToolId } from './types';
 
@@ -14,12 +15,12 @@ export type Draft = Omit<Placed, 'id'>;
 export const EMPTY_DESIGN: Design = { items: [], nextId: 1 };
 
 export const TOOL_INFO: Record<BuildTool, { name: string; cost: number; width: 1 | 2; door: boolean; hinged: boolean; sign?: boolean }> = {
-  wall: { name: 'Brick wall', cost: 500, width: 1, door: false, hinged: false },
-  door1: { name: 'Hinged door', cost: 2000, width: 1, door: true, hinged: true },
-  door2: { name: 'Double door', cost: 3500, width: 2, door: true, hinged: true },
-  slide1: { name: 'Sliding door', cost: 3000, width: 1, door: true, hinged: false },
-  slide2: { name: 'Wide sliding door', cost: 5000, width: 2, door: true, hinged: false },
-  oneway: { name: 'One-way sign', cost: 200, width: 1, door: false, hinged: false, sign: true },
+  wall: { name: 'Brick wall', cost: 500, width: PERSON_TILES, door: false, hinged: false },
+  door1: { name: 'Hinged door', cost: 2000, width: SINGLE_DOOR_TILES, door: true, hinged: true },
+  door2: { name: 'Double door', cost: 3500, width: DOUBLE_DOOR_TILES, door: true, hinged: true },
+  slide1: { name: 'Sliding door', cost: 3000, width: SINGLE_DOOR_TILES, door: true, hinged: false },
+  slide2: { name: 'Wide sliding door', cost: 5000, width: DOUBLE_DOOR_TILES, door: true, hinged: false },
+  oneway: { name: 'One-way sign', cost: 200, width: PERSON_TILES, door: false, hinged: false, sign: true },
 };
 
 const isSign = (it: Draft) => !!TOOL_INFO[it.tool].sign;

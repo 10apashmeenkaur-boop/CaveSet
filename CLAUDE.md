@@ -1,6 +1,6 @@
 # Design Lab
 
-Full plan: `PLAN.md`. Build milestone by milestone; commit after each working one.
+Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 prompts in order; commit after each.
 
 ## Core rules
 - `src/sim/` is pure TypeScript: no React/Three imports. Takes level + design, advances in fixed ticks.
@@ -20,4 +20,6 @@ Full plan: `PLAN.md`. Build milestone by milestone; commit after each working on
 - Level 2 has fixed walls: kitchen/washing walls plus a brick ring around the dining hall with sangat entrances. Players cut doors (and may brick up entrances).
 - Level 1 budget is ₹7,500 (plan said ₹6,000, which made separate in/out flows unaffordable).
 - Head-on stand-offs (after SQUEEZE_TICKS): two empty-handed people squeeze past; if a crate is involved one carrier backs out of the doorway (the one in it, else the higher id) and holds YIELD_HOLD_TICKS. On a mutual block only the higher-id agent detours.
-- Level 1 time limit is 60s. Invariant (tested): one shared double door FAILS on time, two double doors PASS.
+- Level 1 time limit is 60s. Invariants (tested): one shared double door FAILS on time; two double doors with opposite one-way signs PASS with no jams.
+- All numbers live in `src/sim/constants.ts` (1 tile = 0.6 m; speeds in tiles/s from real m/s). No magic numbers in sim code.
+- Routing is crowd-aware (occupied + recent-wait costs) so people spread over doors.

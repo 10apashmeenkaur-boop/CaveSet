@@ -1,5 +1,5 @@
 import { costOf } from '../sim/design';
-import { TICKS_PER_SEC } from '../sim/simulate';
+import { TICKS_PER_SEC } from '../sim/constants';
 import type { Level } from '../sim/types';
 import { useStore } from '../store';
 

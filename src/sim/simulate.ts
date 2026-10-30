@@ -1,31 +1,24 @@
 import { speedOf, widthOf, type Agent, type WaitReason } from './agents';
+import {
+  BACKOFF_CLEAR_STEPS,
+  BACKOFF_SEARCH_STEPS,
+  DISTURBANCE_TICKS,
+  RECENT_DECAY,
+  REPATH_TICKS,
+  SIDESTEP_EVERY,
+  SIDESTEP_TICKS,
+  SQUEEZE_TICKS,
+  STUCK_TICKS,
+  TICKS_PER_SEC,
+  YIELD_FALLBACK_TICKS,
+  YIELD_HOLD_TICKS,
+} from './constants';
 import type { Design } from './design';
 import { getCell } from './grid';
 import { complaintOf, detect, type Incident } from './failures';
 import { canStep, DIRS, findPath, isDining, key, makeWorld, type Crowd, type World } from './pathfinding';
 import { rand } from './rng';
 import type { AgentType, Level, Tile, Zone } from './types';
-
-export const TICKS_PER_SEC = 10;
-/** Tiles per second at speed 1.0. */
-export const BASE_SPEED = 2;
-/** Waiting this long: look for another route around whoever is in the way. */
-export const REPATH_TICKS = 15;
-/**
- * A head-on stand-off this long gets resolved: two empty-handed people squeeze past each other;
- * if a crate is involved one carrier backs out of the way instead.
- */
-export const SQUEEZE_TICKS = 35;
-/** Per tick, recent waiting fades by this factor (about a 2s half-life). */
-const RECENT_DECAY = 0.97;
-/** How long someone who backed off waits before trying again. */
-export const YIELD_HOLD_TICKS = 20;
-/** If the one who should back off is boxed in this long after the stand-off, the other one tries. */
-const YIELD_FALLBACK_TICKS = SQUEEZE_TICKS + 20;
-/** Waiting this long: step aside to let the other person through. */
-export const SIDESTEP_TICKS = 40;
-/** Waiting this long counts as stuck (but keeps trying). */
-export const STUCK_TICKS = 60;
 
 type PendingSpawn = { tick: number; type: AgentType; from: string; to: string };
 
@@ -187,7 +180,7 @@ function wait(
     if (detour) a.path = detour;
   }
 
-  if (a.waitTicks >= SIDESTEP_TICKS && a.waitTicks % 20 === 0 && !holdsGround) {
+  if (a.waitTicks >= SIDESTEP_TICKS && a.waitTicks % SIDESTEP_EVERY === 0 && !holdsGround) {
     // Step aside to break a stand-off: first free neighbour, in a seeded order.
     const [r, next] = rand(s.rng);
     s.rng = next;
@@ -222,10 +215,10 @@ function yieldsTo(world: World, a: Agent, other: Agent): boolean {
  */
 function backOff(world: World, a: Agent, occ: Occupancy, other: Agent): boolean {
   const width = widthOf(a);
-  const inTheirWay = new Set([other.pos, ...other.path.slice(0, 8)].map(([x, y]) => key(x, y)));
+  const inTheirWay = new Set([other.pos, ...other.path.slice(0, BACKOFF_CLEAR_STEPS)].map(([x, y]) => key(x, y)));
   const parent = new Map<string, string | null>([[key(a.pos[0], a.pos[1]), null]]);
   let frontier: Tile[] = [a.pos];
-  for (let depth = 1; depth <= 6 && frontier.length; depth++) {
+  for (let depth = 1; depth <= BACKOFF_SEARCH_STEPS && frontier.length; depth++) {
     const nextFrontier: Tile[] = [];
     for (const cur of frontier) {
       for (const [dx, dy] of DIRS) {
@@ -323,7 +316,7 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
     if (!tryTake(world, a, s, occ, before)) return a;
   }
 
-  a.progress += (speedOf(a) * BASE_SPEED) / TICKS_PER_SEC;
+  a.progress += speedOf(a) / TICKS_PER_SEC;
   // May cross more than one tile in a tick; keep claiming tiles until progress < 1.
   while (a.progress >= 1 && a.next) {
     a.progress -= 1;
@@ -353,7 +346,7 @@ export function step(level: Level, world: World, prev: SimState): SimState {
     agents: [...prev.agents],
     heat: [...prev.heat],
     recent: prev.recent.map((v) => v * RECENT_DECAY),
-    disturbances: prev.disturbances.filter((d) => d.tick > prev.tick - 30),
+    disturbances: prev.disturbances.filter((d) => d.tick > prev.tick - DISTURBANCE_TICKS),
   };
   const occ = occupancy(world, s.agents);
 

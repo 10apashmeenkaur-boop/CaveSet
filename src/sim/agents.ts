@@ -1,11 +1,13 @@
+import { CRATE_CARRIER_TILES, CRATE_SPEED, ELDERLY_SPEED, PERSON_TILES, TRAY_SPEED, WALK_SPEED } from './constants';
 import type { IncidentCode } from './failures';
 import type { AgentType, Tile } from './types';
 
+/** Width in tiles and speed in tiles per second, from the real-world scale in constants.ts. */
 export const AGENT_INFO: Record<AgentType, { width: 1 | 2; speed: number; label: string }> = {
-  empty: { width: 1, speed: 1.0, label: 'Sevadar' },
-  crate: { width: 2, speed: 0.7, label: 'Crate carrier' },
-  tray: { width: 1, speed: 0.8, label: 'Tray carrier' },
-  elderly: { width: 1, speed: 0.5, label: 'Elderly visitor' },
+  empty: { width: PERSON_TILES, speed: WALK_SPEED, label: 'Sevadar' },
+  crate: { width: CRATE_CARRIER_TILES, speed: CRATE_SPEED, label: 'Crate carrier' },
+  tray: { width: PERSON_TILES, speed: TRAY_SPEED, label: 'Tray carrier' },
+  elderly: { width: PERSON_TILES, speed: ELDERLY_SPEED, label: 'Elderly visitor' },
 };
 
 export type AgentState = 'walking' | 'waiting' | 'stuck' | 'done';

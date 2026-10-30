@@ -1,4 +1,5 @@
 import type { Agent } from './agents';
+import { CONGESTION_TICKS, HEAD_ON_TICKS, SWING_TICKS } from './constants';
 import type { Tile } from './types';
 
 export type IncidentCode =
@@ -70,10 +71,6 @@ export const PRINCIPLES: Record<IncidentCode, { title: string; principle: string
   },
 };
 
-export const HEAD_ON_TICKS = 30;
-export const SWING_TICKS = 20;
-/** A tile where people waited this many ticks in total counts as congested (10 ticks = 1s). */
-export const CONGESTION_TICKS = 150;
 
 const where = ([x, y]: Tile) => `(${x},${y})`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

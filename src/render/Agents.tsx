@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type { Group } from 'three';
 import { effectiveType, speedOf, type Agent } from '../sim/agents';
-import { BASE_SPEED, TICKS_PER_SEC } from '../sim/simulate';
+import { TICKS_PER_SEC } from '../sim/constants';
 import type { IncidentCode } from '../sim/failures';
 import type { Level, Tile } from '../sim/types';
 import { useStore } from '../store';
@@ -34,7 +34,7 @@ function interpolated(level: Level, a: Agent, alpha: number): [number, number, n
   const from = tileToWorld(level, ...a.pos);
   if (!a.next || a.state !== 'walking') return from;
   const to = tileToWorld(level, ...a.next);
-  const t = Math.min(1, a.progress + (alpha * speedOf(a) * BASE_SPEED) / TICKS_PER_SEC);
+  const t = Math.min(1, a.progress + (alpha * speedOf(a)) / TICKS_PER_SEC);
   return [from[0] + (to[0] - from[0]) * t, 0, from[2] + (to[2] - from[2]) * t];
 }
 

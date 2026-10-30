@@ -1,4 +1,5 @@
 import { buildGrid, doorAt, itemTiles, swingTiles, TOOL_INFO, type Design, type Orient } from './design';
+import { DINING_COST, OCCUPIED_COST, RECENT_CAP, RECENT_WEIGHT } from './constants';
 import { getCell, type Grid } from './grid';
 import type { Level, Tile } from './types';
 
@@ -15,8 +16,6 @@ export type World = {
   oneWay: Map<string, Tile>;
 };
 
-/** Walking through people eating is allowed but people avoid it: each dining tile costs this much. */
-export const DINING_COST = 2;
 
 export const key = (x: number, y: number) => `${x},${y}`;
 
@@ -98,11 +97,6 @@ export type Crowd = {
   recent: number[];
 };
 
-/** Extra route cost for a tile someone is standing on: worth a few steps' detour, not a wall. */
-export const OCCUPIED_COST = 4;
-/** Extra cost per unit of recent waiting on a tile, capped so a busy door is avoided but never forbidden. */
-export const RECENT_WEIGHT = 0.5;
-export const RECENT_CAP = 8;
 
 /**
  * 4-direction A*. Returns the tiles after `from` up to and including `to`, or null. Deterministic tie-breaks.
