@@ -1,11 +1,11 @@
 import { MapControls, OrthographicCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { useMemo } from 'react';
 import { MOUSE } from 'three';
 import type { Level } from '../sim/types';
 import { DesignLayer, GhostLayer, InteractionPlane } from './Build';
 import { tileToWorld } from './coords';
 import { COLORS } from './palette';
+import { Floor, Props, ZoneLabels } from './World';
 import { Person } from './Person';
 
 // Isometric-ish view: ~45° yaw, ~35° pitch.
@@ -20,45 +20,6 @@ const CAM_POS: [number, number, number] = [
 
 // Left button is for building; right/middle drag pans. (-1 = no action in OrbitControls.)
 const MOUSE_BUTTONS = { LEFT: -1 as MOUSE, MIDDLE: MOUSE.PAN, RIGHT: MOUSE.PAN };
-
-function Floor({ level }: { level: Level }) {
-  const { w, h } = level.grid;
-  return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[w, h]} />
-        <meshStandardMaterial color={COLORS.floor} />
-      </mesh>
-      {Object.entries(level.zones).map(([name, z]) => {
-        const [cx, , cz] = tileToWorld(level, z.x + z.w / 2 - 0.5, z.y + z.h / 2 - 0.5);
-        return (
-          <mesh key={name} rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.005, cz]} receiveShadow>
-            <planeGeometry args={[z.w, z.h]} />
-            <meshStandardMaterial color={COLORS.zones[name] ?? '#ddd'} transparent opacity={0.55} />
-          </mesh>
-        );
-      })}
-      <GridLines w={w} h={h} />
-    </group>
-  );
-}
-
-function GridLines({ w, h }: { w: number; h: number }) {
-  const positions = useMemo(() => {
-    const pts: number[] = [];
-    for (let x = 0; x <= w; x++) pts.push(x - w / 2, 0, -h / 2, x - w / 2, 0, h / 2);
-    for (let y = 0; y <= h; y++) pts.push(-w / 2, 0, y - h / 2, w / 2, 0, y - h / 2);
-    return new Float32Array(pts);
-  }, [w, h]);
-  return (
-    <lineSegments position={[0, 0.01, 0]}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <lineBasicMaterial color={COLORS.gridLine} />
-    </lineSegments>
-  );
-}
 
 /** Idle preview crowd so the character style is visible before agents exist (replaced in M3). */
 function PreviewPeople({ level }: { level: Level }) {
@@ -94,6 +55,8 @@ export function Scene({ level }: { level: Level }) {
         shadow-camera-bottom={-15}
       />
       <Floor level={level} />
+      <Props level={level} />
+      <ZoneLabels level={level} />
       <DesignLayer level={level} />
       <GhostLayer level={level} />
       <InteractionPlane level={level} />

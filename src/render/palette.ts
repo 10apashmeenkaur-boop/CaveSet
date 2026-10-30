@@ -11,6 +11,14 @@ export const COLORS = {
   glass: '#bfe3f2',
   swing: '#ff8a2a',
   hover: '#23395b',
+  editable: '#ffd166',
+  slab: '#d8cfc3',
+  counter: '#d9a46c',
+  sinkCounter: '#b9cfd8',
+  steel: '#c3c9d1',
+  mat: '#d96c5f',
+  /** Muted shirts for diners so they never look like workers. */
+  diners: ['#e9b8c4', '#f3dd8a', '#c8d7a4', '#d7c3a8', '#c9c2e6'],
   zones: {
     kitchen: '#f6c99b',
     washing: '#a9d6e5',

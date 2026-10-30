@@ -12,10 +12,14 @@ type Props = {
   /** Phase offset so a crowd doesn't bounce in sync. */
   phase?: number;
   walking?: boolean;
+  /** Sitting cross-legged on the floor (diners). */
+  seated?: boolean;
+  /** Override the role colour. */
+  shirt?: string;
 };
 
 /** Cartoon bobble-head: round body, big head, dot eyes, no limbs. */
-export function Person({ type, position, facing = 0, skin = 0, phase = 0, walking = true }: Props) {
+export function Person({ type, position, facing = 0, skin = 0, phase = 0, walking = true, seated = false, shirt }: Props) {
   const bob = useRef<Group>(null);
   const slow = type === 'elderly';
 
@@ -23,12 +27,12 @@ export function Person({ type, position, facing = 0, skin = 0, phase = 0, walkin
     if (!bob.current) return;
     const t = clock.elapsedTime * (slow ? 5 : 8) + phase;
     const amp = walking ? 0.08 : 0.02;
-    bob.current.position.y = Math.abs(Math.sin(t)) * amp;
+    bob.current.position.y = (seated ? -0.12 : 0) + Math.abs(Math.sin(t)) * amp;
     bob.current.rotation.z = walking ? Math.sin(t) * 0.08 : 0;
   });
 
   return (
-    <group position={position} rotation={[0, facing, 0]}>
+    <group position={position} rotation={[0, facing, 0]} scale={seated ? 0.8 : 1}>
       {/* Shadow */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.011, 0]}>
         <circleGeometry args={[0.28, 20]} />
@@ -39,7 +43,7 @@ export function Person({ type, position, facing = 0, skin = 0, phase = 0, walkin
         {/* Body */}
         <mesh position={[0, 0.3, 0]} scale={[1, 1.15, 0.9]} castShadow>
           <sphereGeometry args={[0.24, 16, 12]} />
-          <meshStandardMaterial color={SHIRT[type]} flatShading />
+          <meshStandardMaterial color={shirt ?? SHIRT[type]} flatShading />
         </mesh>
         {/* Head */}
         <mesh position={[0, 0.72, 0]} castShadow>

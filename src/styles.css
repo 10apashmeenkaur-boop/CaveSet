@@ -196,3 +196,20 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
   .hud.top-right .quote, .controls-hint { display: none; }
   .hud.top-right { width: 200px; }
 }
+
+/* Zone name tags floating over the floor */
+.zone-label {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 1px 10px;
+  white-space: nowrap;
+  user-select: none;
+}
+.zone-label.zone-kitchen { background: #ffe6cc; }
+.zone-label.zone-washing { background: #dff1f7; }
+.zone-label.zone-dining { background: #e6f2db; }

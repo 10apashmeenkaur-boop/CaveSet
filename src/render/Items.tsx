@@ -1,6 +1,7 @@
 import { DoubleSide } from 'three';
 import { itemTiles, TOOL_INFO, type Draft } from '../sim/design';
 import type { Level } from '../sim/types';
+import { brickTexture } from './brick';
 import { tileToWorld } from './coords';
 import { COLORS } from './palette';
 
@@ -26,11 +27,29 @@ function frame(level: Level, item: Draft) {
   return { center, rot };
 }
 
+// Box faces in order: +x, -x, +y (top), -y, +z, -z.
+const WALL_FACES = [0, 1, 2, 3, 4, 5];
+
 export function WallBlock({ position, ghost }: { position: [number, number, number]; ghost?: Ghost }) {
+  if (ghost) {
+    return (
+      <mesh position={[position[0], WALL_H / 2, position[2]]}>
+        <boxGeometry args={[1, WALL_H, 1]} />
+        <Mat color={COLORS.wall} ghost={ghost} />
+      </mesh>
+    );
+  }
+  const bricks = brickTexture();
   return (
-    <mesh position={[position[0], WALL_H / 2, position[2]]} castShadow={!ghost} receiveShadow>
+    <mesh position={[position[0], WALL_H / 2, position[2]]} castShadow receiveShadow>
       <boxGeometry args={[1, WALL_H, 1]} />
-      <Mat color={COLORS.wall} ghost={ghost} />
+      {WALL_FACES.map((i) =>
+        i === 2 ? (
+          <meshStandardMaterial key={i} attach={`material-${i}`} color={COLORS.wallTop} />
+        ) : (
+          <meshStandardMaterial key={i} attach={`material-${i}`} map={bricks} />
+        ),
+      )}
     </mesh>
   );
 }
