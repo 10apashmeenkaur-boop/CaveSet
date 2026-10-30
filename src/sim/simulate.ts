@@ -1,9 +1,14 @@
-import { goingIn, speedOf, widthOf, type Agent, type WaitReason } from './agents';
+import { AGENT_INFO, effectiveType, goingIn, onWheels, speedOf, widthOf, type Agent, type StuckReason, type WaitReason } from './agents';
 import {
   BACKOFF_CLEAR_STEPS,
   BACKOFF_SEARCH_STEPS,
   DISTURBANCE_TICKS,
+  ELDERLY_STAIRS_COST,
   LINE_SQUEEZE_TICKS,
+  RAMP_MAX_SLOPE,
+  RAMP_REST_TILES,
+  ROLLBACK_AFTER_TILES,
+  ROLLBACK_SPEED,
   RECENT_DECAY,
   REPATH_TICKS,
   SEAT_RETRY_TICKS,
@@ -13,14 +18,29 @@ import {
   SQUEEZE_TICKS,
   STUCK_TICKS,
   TICKS_PER_SEC,
+  TILE_M,
   YIELD_FALLBACK_TICKS,
   YIELD_HOLD_TICKS,
 } from './constants';
 import type { Design } from './design';
 import { getCell } from './grid';
 import { complaintOf, detect, type Incident } from './failures';
-import { canStep, DIRS, findPath, isDining, key, makeWorld, type Crowd, type World } from './pathfinding';
+import {
+  canStep,
+  DIRS,
+  findPath,
+  findWheelPath,
+  isDining,
+  key,
+  makeWorld,
+  wheelReach,
+  type Crowd,
+  type TileCost,
+  type WheelRules,
+  type World,
+} from './pathfinding';
 import { rand } from './rng';
+import { isSlope, slopeFactor, STAIRS, tooSteep } from './terrain';
 import type { AgentType, Level, StationKind, Tile, Zone } from './types';
 
 type PendingSpawn = { tick: number; type: AgentType; from: string; to: string };
@@ -98,7 +118,8 @@ export function initSim(level: Level, seed = level.seed ?? 1, world?: World): Si
   }
   // Stable sort keeps rule order for equal ticks, so spawning is deterministic.
   pending.sort((a, b) => a.tick - b.tick);
-  const totalTasks = level.spawns.filter((r) => r.type !== 'elderly').reduce((n, r) => n + r.count, 0);
+  // On the ramp level everyone has to get up, the elderly visitor too.
+  const totalTasks = level.spawns.filter((r) => r.type !== 'elderly' || level.rise).reduce((n, r) => n + r.count, 0);
   const seatTaken: (string | null)[] = world ? world.seats.map(() => null) : [];
   const agents = world ? seatPangat(level, world, seatTaken) : [];
   return {
@@ -151,12 +172,31 @@ export function footprint(world: World, t: Tile, width: 1 | 2): Tile[] {
   return [t];
 }
 
+/** The second tile a moving wheelchair or trolley covers: the other half of the ramp, else the free side beside it. */
+export function laneTile(world: World, a: Agent): Tile | null {
+  const t = world.terrain;
+  if (!t || widthOf(a) !== 2 || a.state === 'stuck') return null;
+  const i = a.pos[1] * t.w + a.pos[0];
+  if (t.sibling[i] >= 0) return [t.sibling[i] % t.w, Math.floor(t.sibling[i] / t.w)];
+  const [px, py] = a.dir[0] !== 0 ? [0, 1] : [1, 0];
+  for (const s of [1, -1]) {
+    const side: Tile = [a.pos[0] + s * px, a.pos[1] + s * py];
+    if (canStep(world, a.pos, side, 1, 'wheel')) return side;
+  }
+  return null;
+}
+
+/** Someone on foot who gave up for good on the ramp level: others step around them. (A stuck chair or trolley still takes its space.) */
+const outOfPlay = (world: World, a: Agent) => !!world.terrain && a.state === 'stuck' && a.stuckReason !== 'jam' && !onWheels(a.type);
+
 function occupancy(world: World, agents: Agent[]): Occupancy {
   const occ: Occupancy = new Map();
   for (const a of agents) {
-    if (a.state === 'done') continue;
+    if (a.state === 'done' || outOfPlay(world, a)) continue;
     for (const [x, y] of footprint(world, a.pos, widthOf(a))) occ.set(key(x, y), a.id);
     if (a.next) for (const [x, y] of footprint(world, a.next, widthOf(a))) occ.set(key(x, y), a.id);
+    const lane = laneTile(world, a);
+    if (lane && !occ.has(key(...lane))) occ.set(key(...lane), a.id);
   }
   return occ;
 }
@@ -207,17 +247,130 @@ const idNum = (a: Agent) => Number(a.id.slice(1));
 const same = (a: Tile, b: Tile) => a[0] === b[0] && a[1] === b[1];
 /**
  * Goals are on a counter/sink column: reaching the column anywhere counts, so people don't queue for one exact tile.
- * The sangat goes to exact spots (a station, a seat, the exit).
+ * The sangat goes to exact spots (a station, a seat, the exit); so does everyone on the ramp level (the roof).
  */
-const reached = (a: Agent) => (a.type === 'sangat' ? same(a.pos, a.goal) : a.pos[0] === a.goal[0]);
+const reached = (world: World, a: Agent) => (a.type === 'sangat' || world.terrain ? same(a.pos, a.goal) : a.pos[0] === a.goal[0]);
+
+/** Steepest ramp a wheelchair or trolley can go up: 1:12, as mm of rise per tile. */
+const WHEEL_MAX_RISE = RAMP_MAX_SLOPE * TILE_M * 1000;
+
+/** Route cost of a tile for this kind of agent: slow ground costs more, and the elderly steer clear of stairs. */
+function costFor(world: World, type: Agent['type']): TileCost | undefined {
+  const t = world.terrain;
+  if (!t) return undefined;
+  return (x, y) => {
+    const i = y * t.w + x;
+    if (type === 'elderly' && t.kind[i] === STAIRS) return ELDERLY_STAIRS_COST;
+    return 1 / slopeFactor(t, i, type);
+  };
+}
+
+/** Speed right now, in tiles per second: slower on slopes; a trolley rolling back goes faster. */
+export function speedAt(world: World | null, a: Agent): number {
+  if (a.rolling) return ROLLBACK_SPEED;
+  const t = world?.terrain;
+  const base = speedOf(a);
+  if (!t) return base;
+  const [x, y] = a.next ?? a.pos;
+  return base * slopeFactor(t, y * t.w + x, effectiveType(a));
+}
 
 /** Plan a route. If the agent is too wide for every route, it heads for the narrow one and gets stuck there. */
 function plan(world: World, a: Agent, crowd?: Crowd): Agent {
+  if (world.terrain && onWheels(a.type)) return planWheels(world, a, crowd);
+  const cost = costFor(world, a.type);
   const route =
-    findPath(world, a.pos, a.goal, widthOf(a), crowd) ?? (widthOf(a) === 2 ? findPath(world, a.pos, a.goal, 1, crowd) : null);
+    findPath(world, a.pos, a.goal, widthOf(a), crowd, cost) ??
+    (widthOf(a) === 2 ? findPath(world, a.pos, a.goal, 1, crowd, cost) : null);
   if (!route) return { ...a, path: [], state: 'stuck', stuckReason: 'no-path' };
   return { ...a, path: route, state: 'walking', stuckReason: undefined };
 }
+
+/**
+ * A wheelchair or trolley takes a proper accessible route if there is one. If not, it tries the way a user would
+ * (any ramp, any corner) and stops where the design lets it down. With no step-free way up at all it goes as high
+ * as any ramp takes it, else to the foot of the stairs people on foot use, and stops there.
+ */
+function planWheels(world: World, a: Agent, crowd?: Crowd): Agent {
+  const cost = costFor(world, a.type);
+  const chair = a.type === 'wheelchair';
+  const run = a.run ?? 0;
+  const go = (path: Tile[], deadEnd?: StuckReason): Agent => ({ ...a, path, state: 'walking', stuckReason: undefined, deadEnd });
+  const proper: WheelRules = { lane: 2, maxRise: WHEEL_MAX_RISE, turns: chair ? 'turnable' : 'any', rest: chair ? RAMP_REST_TILES : Infinity };
+  const ok = findWheelPath(world, a.pos, a.dir, run, a.goal, proper, crowd, cost);
+  if (ok) return go(ok);
+  // (Turning only on flat ground, so it doesn't swerve between the ramp's two halves.)
+  const attempt: WheelRules = { lane: 1, maxRise: Infinity, turns: 'flat', rest: Infinity };
+  const tried = findWheelPath(world, a.pos, a.dir, run, a.goal, attempt, crowd, cost);
+  if (tried) return go(tried);
+  const t = world.terrain!;
+  const dist = (p: Tile) => Math.abs(p[0] - a.goal[0]) + Math.abs(p[1] - a.goal[1]);
+  const height = (p: Tile) => t.center[p[1] * t.w + p[0]];
+  const best = wheelReach(world, a.pos).reduce((b, p) => (height(p) > height(b) || (height(p) === height(b) && dist(p) < dist(b)) ? p : b));
+  const onFoot = height(best) > height(a.pos) ? null : findPath(world, a.pos, a.goal, 1, undefined, costFor(world, 'sack'));
+  if (onFoot) {
+    const cut = onFoot.findIndex((tile, k) => !canStep(world, k ? onFoot[k - 1] : a.pos, tile, 1, 'wheel'));
+    return go(cut < 0 ? onFoot : onFoot.slice(0, cut), 'no-access');
+  }
+  return go(findWheelPath(world, a.pos, a.dir, run, best, attempt, undefined, cost) ?? [], 'no-access');
+}
+
+/**
+ * Before a wheelchair or trolley rolls on to `nxt`: is there a reason it can't? (Following a proper route, never.)
+ * A trolley does start up a too-steep ramp: it rolls back once it's on it (see `rolled`).
+ */
+function wheelTrouble(world: World, a: Agent, nxt: Tile): StuckReason | null {
+  const t = world.terrain!;
+  const i = a.pos[1] * t.w + a.pos[0];
+  const n = nxt[1] * t.w + nxt[0];
+  const dir: Tile = [nxt[0] - a.pos[0], nxt[1] - a.pos[1]];
+  const chair = a.type === 'wheelchair';
+  if (chair && a.trail && !same(dir, a.dir) && !t.turnable[i]) return 'tight-turn';
+  if (!canStep(world, a.pos, nxt, 2, 'wheel')) return 'tight-turn';
+  const uphill = dir[0] === t.dx[n] && dir[1] === t.dy[n];
+  if (chair && uphill && tooSteep(t, n, WHEEL_MAX_RISE)) return 'too-steep';
+  if (chair && isSlope(t, n) && (a.run ?? 0) + 1 > RAMP_REST_TILES) return 'exhausted';
+  return null;
+}
+
+/** After rolling on to a tile: count ramp tiles in a row; a trolley too far up a too-steep ramp starts rolling back. */
+function rolled(world: World, a: Agent): Agent {
+  const t = world.terrain!;
+  if (a.rolling) return a;
+  const i = a.pos[1] * t.w + a.pos[0];
+  if (!isSlope(t, i)) return { ...a, run: 0, trail: [a.pos], steep: 0 };
+  const uphill = a.dir[0] === t.dx[i] && a.dir[1] === t.dy[i];
+  const steep = (a.steep ?? 0) + (uphill && tooSteep(t, i, WHEEL_MAX_RISE) ? 1 : 0);
+  const trail = [...(a.trail ?? []), a.pos];
+  if (a.type === 'trolley' && steep >= ROLLBACK_AFTER_TILES) {
+    // Back down the way it came, still facing uphill, to the last flat tile.
+    return { ...a, run: (a.run ?? 0) + 1, trail, steep, rolling: true, path: trail.slice(0, -1).reverse() };
+  }
+  return { ...a, run: (a.run ?? 0) + 1, trail, steep };
+}
+
+/** A trolley rolling back: nothing stops it; at the bottom it stays put. */
+function rollBack(a: Agent): Agent {
+  const r = { ...a };
+  if (!r.next) {
+    if (!r.path.length) return { ...r, rolling: false, state: 'stuck', stuckReason: 'rollback', progress: 0 };
+    r.next = r.path[0];
+    r.path = r.path.slice(1);
+  }
+  r.state = 'walking';
+  r.progress += ROLLBACK_SPEED / TICKS_PER_SEC;
+  while (r.progress >= 1 && r.next) {
+    r.progress -= 1;
+    r.pos = r.next;
+    r.next = r.path.length ? r.path[0] : null;
+    r.path = r.path.slice(1);
+  }
+  if (!r.next) r.progress = 0;
+  return r;
+}
+
+/** At the end of a route that stops short: stuck there, for the planned reason. */
+const stopShort = (a: Agent): Agent => ({ ...a, state: 'stuck', stuckReason: a.deadEnd, deadEnd: undefined, progress: 0 });
 
 function arrive(world: World, a: Agent, s: SimState, occ: Occupancy): Agent {
   if (a.leaving) return { ...a, state: 'done' };
@@ -232,6 +385,11 @@ function arrive(world: World, a: Agent, s: SimState, occ: Occupancy): Agent {
     return { ...a, state: 'waiting', waitReason: 'service', waitTicks: 0, blocker: undefined, dir, serveUntil };
   }
   if (a.phase === 'deliver') {
+    // Up on the roof: that's the job done, for people and sacks alike.
+    if (world.terrain) {
+      s.delivered++;
+      return { ...a, state: 'done' };
+    }
     if (a.type === 'elderly') return { ...a, state: 'done' };
     s.delivered++;
     return plan(world, { ...a, carrying: false, phase: 'return', goal: a.home }, crowdFor(s, occ, a.id));
@@ -281,13 +439,20 @@ function wait(
 
   // Someone sat down in the way: no point waiting for them to move.
   const seatedInWay = other?.state === 'seated' && a.waitTicks === 1;
+  // A wheelchair or trolley on the ramp level can't just step aside, but it can look for another way.
+  const wheels = !!world.terrain && onWheels(a.type);
   if ((a.waitTicks % REPATH_TICKS === 0 || seatedInWay) && !holdsGround) {
     // Re-route with the crowd in mind: a less busy door is worth some extra steps.
-    const detour = findPath(world, a.pos, a.goal, widthOf(a), crowdFor(s, occ, a.id));
-    if (detour) a.path = detour;
+    if (wheels) {
+      const re = planWheels(world, a, crowdFor(s, occ, a.id));
+      if (re.path.length) Object.assign(a, { path: re.path, deadEnd: re.deadEnd });
+    } else {
+      const detour = findPath(world, a.pos, a.goal, widthOf(a), crowdFor(s, occ, a.id), costFor(world, a.type));
+      if (detour) a.path = detour;
+    }
   }
 
-  if (a.waitTicks >= SIDESTEP_TICKS && a.waitTicks % SIDESTEP_EVERY === 0 && !holdsGround) {
+  if (a.waitTicks >= SIDESTEP_TICKS && a.waitTicks % SIDESTEP_EVERY === 0 && !holdsGround && !wheels) {
     // Step aside to break a stand-off: first free neighbour, in a seeded order.
     const [r, next] = rand(s.rng);
     s.rng = next;
@@ -353,7 +518,14 @@ function backOff(world: World, a: Agent, occ: Occupancy, other: Agent): boolean 
 function tryTake(world: World, a: Agent, s: SimState, occ: Occupancy, before: Map<string, Agent>): boolean {
   const nxt = a.path[0];
   const dir: Tile = [nxt[0] - a.pos[0], nxt[1] - a.pos[1]];
-  if (!canStep(world, a.pos, nxt, widthOf(a))) {
+  if (world.terrain && onWheels(a.type)) {
+    const why = wheelTrouble(world, a, nxt);
+    if (why) {
+      Object.assign(a, { state: 'stuck', stuckReason: why, progress: 0 });
+      return false;
+    }
+  }
+  if (!canStep(world, a.pos, nxt, widthOf(a), onWheels(a.type) ? 'wheel' : 'walk')) {
     // Only possible for a wide carrier on its fallback route: the gap ahead is too narrow.
     Object.assign(a, { state: 'stuck', stuckReason: 'too-narrow', dir, progress: 0 });
     return false;
@@ -371,7 +543,7 @@ function tryTake(world: World, a: Agent, s: SimState, occ: Occupancy, before: Ma
     squeeze = waiter.id;
   } else if (standoff && widthOf(a) === 1 && widthOf(other) === 1) {
     squeeze = other.id; // empty-handed: squeeze past
-  } else if (standoff) {
+  } else if (standoff && !onWheels(a.type)) {
     // A crate can't squeeze past anyone in a doorway: one of them backs out.
     const mine = yieldsTo(world, a, other);
     if ((mine || a.waitTicks >= YIELD_FALLBACK_TICKS) && backOff(world, a, occ, other)) return false;
@@ -409,6 +581,7 @@ function holdAfterRetreat(a: Agent, s: SimState): Agent {
 function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Map<string, Agent>): Agent {
   if (prev.state === 'done' || prev.state === 'seated') return prev;
   if (prev.state === 'stuck' && prev.stuckReason !== 'jam') return prev;
+  if (prev.rolling) return rollBack(prev);
   let a: Agent = { ...prev };
 
   // Being served at a station: stay until done, then move on.
@@ -427,25 +600,30 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
 
   if (!a.next) {
     if (!a.path.length) {
-      if (reached(a)) return arrive(world, { ...a, progress: 0 }, s, occ);
+      if (reached(world, a)) return arrive(world, { ...a, progress: 0 }, s, occ);
       if (a.retreat) return holdAfterRetreat(a, s);
+      if (a.deadEnd) return stopShort(a);
       a = plan(world, a, crowdFor(s, occ, a.id)); // after a sidestep
       if (a.state === 'stuck') return a;
     }
     if (!tryTake(world, a, s, occ, before)) return a;
   }
 
-  a.progress += speedOf(a) / TICKS_PER_SEC;
+  a.progress += speedAt(world, a) / TICKS_PER_SEC;
   // May cross more than one tile in a tick; keep claiming tiles until progress < 1.
   while (a.progress >= 1 && a.next) {
     a.progress -= 1;
     a.pos = a.next;
     a.next = null;
     if (isDining(world, a.pos[0], a.pos[1])) s.disturbances.push({ tile: a.pos, tick: s.tick, agent: a.id });
-    if (reached(a)) return arrive(world, { ...a, progress: 0 }, s, occ);
+    if (world.terrain && onWheels(a.type)) {
+      a = rolled(world, a);
+      if (a.rolling) return { ...a, progress: 0 };
+    }
+    if (reached(world, a)) return arrive(world, { ...a, progress: 0 }, s, occ);
     if (!a.path.length) {
       a.progress = 0;
-      return a.retreat ? holdAfterRetreat(a, s) : a;
+      return a.retreat ? holdAfterRetreat(a, s) : a.deadEnd ? stopShort(a) : a;
     }
     if (!tryTake(world, a, s, occ, before)) {
       a.progress = 0;
@@ -481,7 +659,18 @@ export function step(level: Level, world: World, prev: SimState): SimState {
     [home, rng] = pickServiceTile(level, world, sp.from, rng);
     [goal, rng] = pickServiceTile(level, world, sp.to, rng);
     const dir: Tile = [goal[0] > home[0] ? 1 : -1, 0];
-    const width = sp.type === 'crate' ? 2 : 1;
+    const width = AGENT_INFO[sp.type].width;
+    // On the ramp level people arrive anywhere in the yard, so someone standing at the gate doesn't stop the rest.
+    const standing = new Set(s.agents.filter((a) => a.state !== 'done').map((a) => key(...a.pos)));
+    if (level.rise && (occ.has(key(...home)) || standing.has(key(...home)))) {
+      const z = level.zones[sp.from];
+      const free: Tile[] = [];
+      for (let y = z.y; y < z.y + z.h; y++) {
+        for (let x = z.x; x < z.x + z.w; x++) if (!occ.has(key(x, y)) && !standing.has(key(x, y))) free.push([x, y]);
+      }
+      const near = (t: Tile) => Math.abs(t[0] - home[0]) + Math.abs(t[1] - home[1]);
+      if (free.length) home = free.sort((a, b) => near(a) - near(b))[0];
+    }
     const fp = footprint(world, home, width);
     if (fp.some(([x, y]) => occ.has(key(x, y)))) break;
     s.pending.shift();
@@ -511,7 +700,7 @@ export function step(level: Level, world: World, prev: SimState): SimState {
     const agent = plan(world, {
       id: `p${s.nextId++}`,
       type: sp.type,
-      carrying: sp.type === 'crate' || sp.type === 'tray',
+      carrying: sp.type === 'crate' || sp.type === 'tray' || sp.type === 'sack' || sp.type === 'trolley',
       pos: home,
       next: null,
       progress: 0,
@@ -570,6 +759,7 @@ export function step(level: Level, world: World, prev: SimState): SimState {
       seats: world.seats.length,
       peak: s.peak,
     },
+    rise: !!level.rise,
   });
   return s;
 }

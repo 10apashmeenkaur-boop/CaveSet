@@ -10,6 +10,7 @@ import { useStore } from '../store';
 import { tileToWorld } from './coords';
 import { WALL_H } from './Items';
 import { COLORS } from './palette';
+import { surfaceY } from './Terrain';
 
 /** Soft pulsing outline around every wall tile you're allowed to put a door in. Design mode only. */
 export function EditableGlow({ level }: { level: Level }) {
@@ -86,15 +87,16 @@ function flowsOf(level: Level, world: World): Flow[] {
   return [...seen.values()];
 }
 
-/** World points for a tile route; two-way flows keep to the right of their direction so they don't overlap. */
-function points(level: Level, tiles: Tile[], keepRight: boolean): [number, number, number][] {
-  return tiles.map((t, i) => {
+/** World points for a tile route; two-way flows keep to the right of their direction so they don't overlap. On the ramp level they follow the slope. */
+function points(level: Level, world: World, tiles: Tile[], keepRight: boolean): [number, number, number][] {
+  const t = world.terrain;
+  return tiles.map((p, i) => {
     const a = tiles[Math.max(0, i - 1)];
     const b = tiles[Math.min(tiles.length - 1, i + 1)];
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     const side = keepRight ? 0.25 : 0;
-    const [wx, , wz] = tileToWorld(level, t[0] - ((b[1] - a[1]) / len) * side, t[1] + ((b[0] - a[0]) / len) * side);
-    return [wx, 0.07, wz];
+    const [wx, , wz] = tileToWorld(level, p[0] - ((b[1] - a[1]) / len) * side, p[1] + ((b[0] - a[0]) / len) * side);
+    return [wx, 0.07 + surfaceY(t, p[0], p[1]), wz];
   });
 }
 
@@ -107,7 +109,7 @@ export function RouteArrows({ level }: { level: Level }) {
   const mode = useStore((s) => s.mode);
   const flows = useMemo(() => {
     const world = makeWorld(level, design);
-    return flowsOf(level, world).map((f) => ({ ...f, pts: points(level, route(world, f.stops), f.twoWay) }));
+    return flowsOf(level, world).map((f) => ({ ...f, pts: points(level, world, route(world, f.stops), f.twoWay) }));
   }, [level, design]);
   const group = useRef<Group>(null);
   const fade = useRef(1);

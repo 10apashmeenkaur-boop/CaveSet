@@ -6,10 +6,12 @@ import {
   doorAt,
   EMPTY_DESIGN,
   eraseAt,
+  eraseTarget,
   isEditable,
   place,
   snapSign,
   TOOL_INFO,
+  upDir,
   type BuildTool,
   type Design,
   type Draft,
@@ -19,6 +21,7 @@ import {
 } from './sim/design';
 import { makeWorld, type World } from './sim/pathfinding';
 import { EMPTY_PROGRESS, recordRun, type Progress } from './sim/progress';
+import { RAMP_SLOPES } from './sim/constants';
 import { score } from './sim/scoring';
 import { initSim, step, type SimState } from './sim/simulate';
 import type { Level, Tile, ToolId } from './sim/types';
@@ -67,6 +70,13 @@ type Store = {
   design: Design;
   tool: ToolId;
   orientIdx: number;
+  /** Ramp tool: slope (index into RAMP_SLOPES, R cycles it) and the uphill direction last painted. */
+  slopeIdx: number;
+  rampDir: Tile;
+  /** Tile the current drag last painted, and the ramp it started with (its direction is fixed by the second tile). */
+  lastPaint: Tile | null;
+  dragStart: number | null;
+  startDrag: () => void;
   hover: Tile | null;
   setTool: (tool: ToolId) => void;
   rotate: () => void;
@@ -122,6 +132,10 @@ export const useStore = create<Store>((set, get) => ({
       design: EMPTY_DESIGN,
       tool: findLevel(id)?.allowedTools[0] ?? 'wall',
       orientIdx: 0,
+      slopeIdx: 0,
+      rampDir: [-1, 0],
+      lastPaint: null,
+      dragStart: null,
       hover: null,
       mode: 'design',
       sim: null,
@@ -143,14 +157,23 @@ export const useStore = create<Store>((set, get) => ({
   design: EMPTY_DESIGN,
   tool: 'wall',
   orientIdx: 0,
+  slopeIdx: 0,
+  rampDir: [-1, 0],
+  lastPaint: null,
+  dragStart: null,
+  startDrag: () => set({ lastPaint: null, dragStart: null }),
   hover: null,
   setTool: (tool) => set({ tool }),
-  rotate: () => set((s) => ({ orientIdx: (s.orientIdx + 1) % ORIENTATIONS.length })),
+  rotate: () =>
+    set((s) =>
+      s.tool === 'ramp' ? { slopeIdx: (s.slopeIdx + 1) % RAMP_SLOPES.length } : { orientIdx: (s.orientIdx + 1) % ORIENTATIONS.length },
+    ),
   setHover: (hover) => set({ hover }),
   placeAt: (x, y) => {
     const { levelId, tool, design } = get();
     const level = levelId ? findLevel(levelId) : undefined;
     if (!level || tool === 'eraser') return;
+    if (tool === 'ramp') return paintRamp(level, x, y);
     const r = resolveDraft(level, design, tool, x, y, get().orientIdx);
     if (!r.relevant || !r.check.ok) return;
     set({ design: place(level, design, r.draft), notice: null });
@@ -231,6 +254,54 @@ export function draftFor(tool: BuildTool, x: number, y: number, orientIdx: numbe
   return { tool, x, y, orient, swing };
 }
 
+const asOrient = ([dx, dy]: Tile): [Orient, Side] => (dx !== 0 ? ['v', dx as Side] : ['h', dy as Side]);
+
+/** Which way a ramp at (x, y) should rise: on along a ramp it continues (either end), else the way last painted. */
+export function rampDirAt(design: Design, x: number, y: number, fallback: Tile): Tile {
+  for (const it of design.items) {
+    if (it.tool !== 'ramp') continue;
+    const [dx, dy] = upDir(it);
+    if ((it.x + dx === x && it.y + dy === y) || (it.x - dx === x && it.y - dy === y)) return [dx, dy];
+  }
+  return fallback;
+}
+
+/** The ramp a click at (x, y) would build: current slope, direction from the drag or the ramp it continues. */
+export function rampDraft(s: Pick<Store, 'design' | 'slopeIdx' | 'rampDir'>, x: number, y: number, dir?: Tile): Draft {
+  const [orient, swing] = asOrient(dir ?? rampDirAt(s.design, x, y, s.rampDir));
+  return { tool: 'ramp', x, y, orient, swing, slope: RAMP_SLOPES[s.slopeIdx] };
+}
+
+/**
+ * Ramps are painted uphill: dragging sets the direction. The first piece of a drag turns to match once the second
+ * tile shows which way the drag goes.
+ */
+function paintRamp(level: Level, x: number, y: number) {
+  const s = useStore.getState();
+  const last = s.lastPaint;
+  const step: Tile | undefined = last && Math.abs(x - last[0]) + Math.abs(y - last[1]) === 1 ? [x - last[0], y - last[1]] : undefined;
+  let design = s.design;
+  if (step && s.dragStart !== null) {
+    const first = design.items.find((it) => it.id === s.dragStart);
+    const [orient, swing] = asOrient(step);
+    if (first && (first.orient !== orient || first.swing !== swing)) {
+      const rest = { ...design, items: design.items.filter((it) => it !== first) };
+      const turned = { ...first, orient, swing };
+      if (checkPlace(level, rest, turned).ok) design = { ...rest, items: [...rest.items, turned].sort((a, b) => a.id - b.id) };
+    }
+  }
+  const draft = rampDraft(s, x, y, step);
+  const placed = checkPlace(level, design, draft).ok ? place(level, design, draft) : design;
+  const added = placed.items.length > design.items.length ? placed.items[placed.items.length - 1].id : null;
+  useStore.setState({
+    design: placed,
+    lastPaint: [x, y],
+    dragStart: last ? null : added,
+    rampDir: step ?? s.rampDir,
+    notice: null,
+  });
+}
+
 export type Resolved = {
   draft: Draft;
   check: PlaceCheck;
@@ -242,11 +313,21 @@ export type Resolved = {
  * What a click at (x, y) would build. Doors and stations try the chosen orientation first, then the others,
  * so hovering a wall just works instead of flashing red.
  */
-export function resolveDraft(level: Level, design: Design, tool: BuildTool, x: number, y: number, orientIdx: number): Resolved {
+export function resolveDraft(
+  level: Level,
+  design: Design,
+  tool: BuildTool,
+  x: number,
+  y: number,
+  orientIdx: number,
+  ramp?: Draft,
+): Resolved {
+  if (ramp) return { draft: ramp, check: checkPlace(level, design, ramp), relevant: isEditable(level, x, y) };
   const base = snapSign(design, draftFor(tool, x, y, orientIdx));
   if (TOOL_INFO[tool].sign) return { draft: base, check: checkPlace(level, design, base), relevant: !!doorAt(design, x, y) };
   if (!isEditable(level, x, y)) return { draft: base, check: { ok: false, reason: '' }, relevant: false };
   const first = checkPlace(level, design, base);
+  if (TOOL_INFO[tool].attach) return { draft: base, check: first, relevant: first.ok || !!eraseTarget(design, x, y) };
   if (first.ok || !(TOOL_INFO[tool].door || TOOL_INFO[tool].station)) return { draft: base, check: first, relevant: true };
   // Same axis with the other swing first, then the other axis.
   for (const i of [orientIdx ^ 1, (orientIdx + 2) % 4, ((orientIdx + 2) % 4) ^ 1]) {

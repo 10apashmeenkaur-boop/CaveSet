@@ -2,8 +2,11 @@ export type Tile = [number, number];
 
 export type Zone = { x: number; y: number; w: number; h: number };
 
-/** sangat: a visitor going through the langar line (Level 3). */
-export type AgentType = 'empty' | 'crate' | 'tray' | 'elderly' | 'sangat';
+/**
+ * sangat: a visitor going through the langar line (Level 3).
+ * sack: carries a sack on the shoulder. wheelchair: a sevadar in a wheelchair. trolley: a 2×2 sack trolley, pushed (Level 4).
+ */
+export type AgentType = 'empty' | 'crate' | 'tray' | 'elderly' | 'sangat' | 'sack' | 'wheelchair' | 'trolley';
 
 /** A service point people queue at, one person at a time. */
 export type StationKind = 'shoe' | 'tap' | 'basket';
@@ -39,7 +42,30 @@ export type QueueRules = {
   pangat: { count: number; group: number; every: number; delay: number };
 };
 
-export type ToolId = 'wall' | 'door1' | 'door2' | 'slide1' | 'slide2' | 'oneway' | 'shoe' | 'tap' | 'rail' | 'eraser';
+/** Ramp to the roof (Level 4): a raised zone everyone has to get up to, and a yard they arrive in. */
+export type RiseRules = {
+  /** The raised zone (roof storage), flat at `heightM` above the ground. People and sacks go here. */
+  zone: string;
+  heightM: number;
+  /** Where people arrive. Nothing may be built here. */
+  yard: string;
+};
+
+export type ToolId =
+  | 'wall'
+  | 'door1'
+  | 'door2'
+  | 'slide1'
+  | 'slide2'
+  | 'oneway'
+  | 'shoe'
+  | 'tap'
+  | 'rail'
+  | 'stairs'
+  | 'ramp'
+  | 'landing'
+  | 'handrail'
+  | 'eraser';
 
 export type Level = {
   id: string;
@@ -62,6 +88,7 @@ export type Level = {
   allowedTools: ToolId[];
   stations?: FixedStation[];
   queue?: QueueRules;
+  rise?: RiseRules;
   /** Sim bar progress text, e.g. "🍽 {n}/{total} seated". Default "📦 {n}/{total} delivered". */
   goalLabel?: string;
   /** Mistri Ji: a one-line brief, and nudges keyed by failure code (plus "default") after repeated failed runs. */

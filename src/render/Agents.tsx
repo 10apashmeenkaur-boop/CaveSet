@@ -2,10 +2,14 @@ import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type { Group } from 'three';
-import { effectiveType, speedOf, type Agent } from '../sim/agents';
+import { effectiveType, type Agent } from '../sim/agents';
 import { TICKS_PER_SEC } from '../sim/constants';
 import type { IncidentCode } from '../sim/failures';
+import type { World } from '../sim/pathfinding';
+import { laneTile, speedAt } from '../sim/simulate';
+import { heightBetween } from '../sim/terrain';
 import type { Level, Tile } from '../sim/types';
+import { mmToY } from './Terrain';
 import { useStore } from '../store';
 import { quoteFor } from '../ui/quotes';
 import { tileToWorld } from './coords';
@@ -31,12 +35,20 @@ export function SimRunner() {
   return null;
 }
 
-export function interpolated(level: Level, a: Agent, alpha: number): [number, number, number] {
+/**
+ * Where to draw someone between ticks, including how high up they are on the ramp level.
+ * A wheelchair or trolley is drawn between its tile and the second tile it covers.
+ */
+export function interpolated(level: Level, a: Agent, alpha: number, world?: World | null): [number, number, number] {
+  const t = world?.terrain;
+  const lane = world ? laneTile(world, a) : null;
+  const [ox, oz] = lane ? [(lane[0] - a.pos[0]) / 2, (lane[1] - a.pos[1]) / 2] : [0, 0];
   const from = tileToWorld(level, ...a.pos);
-  if (!a.next || a.state !== 'walking') return from;
+  if (!a.next || a.state !== 'walking') return [from[0] + ox, t ? mmToY(heightBetween(t, a.pos, null, 0)) : 0, from[2] + oz];
   const to = tileToWorld(level, ...a.next);
-  const t = Math.min(1, a.progress + (alpha * speedOf(a)) / TICKS_PER_SEC);
-  return [from[0] + (to[0] - from[0]) * t, 0, from[2] + (to[2] - from[2]) * t];
+  const f = Math.min(1, a.progress + (alpha * speedAt(world ?? null, a)) / TICKS_PER_SEC);
+  const y = t ? mmToY(heightBetween(t, a.pos, a.next, f)) : 0;
+  return [from[0] + (to[0] - from[0]) * f + ox, y, from[2] + (to[2] - from[2]) * f + oz];
 }
 
 function AgentView({ level, index }: { level: Level; index: number }) {
@@ -49,10 +61,14 @@ function AgentView({ level, index }: { level: Level; index: number }) {
   const [type, state, complaint, id] = look.split('|') as [Agent['type'], Agent['state'], string, string];
 
   useFrame(() => {
-    const a = useStore.getState().sim?.agents[index];
+    const st = useStore.getState();
+    const a = st.sim?.agents[index];
     if (!a || !group.current) return;
-    const [x, , z] = interpolated(level, a, clock.acc / TICK_SEC);
-    group.current.position.set(x, 0, z);
+    const [x, y, z] = interpolated(level, a, clock.acc / TICK_SEC, st.world);
+    const g = group.current.position;
+    // Wide wheels ease sideways when their second tile changes (e.g. turning on a landing).
+    const ease = a.type === 'wheelchair' || a.type === 'trolley' ? 0.3 : 1;
+    g.set(g.x + (x - g.x) * ease, y, g.z + (z - g.z) * ease);
     // Turn smoothly towards the walking direction (Person faces +z).
     const target = Math.atan2(a.dir[0], a.dir[1]);
     let diff = target - group.current.rotation.y;
@@ -78,7 +94,7 @@ function AgentView({ level, index }: { level: Level; index: number }) {
         seated={seated}
         shirt={type === 'sangat' ? COLORS.diners[n % COLORS.diners.length] : undefined}
       />
-      {line ? <Bubble text={line} height={1.2} /> : state === 'stuck' ? <Bubble text="?!" height={1.2} small /> : null}
+      {line ? <Bubble text={line} height={1.25} /> : state === 'stuck' ? <Bubble text="?!" height={1.25} small /> : null}
     </group>
   );
 }
@@ -140,10 +156,11 @@ function GhostView({ level, index }: { level: Level; index: number }) {
   });
   const [type, state, id] = look.split('|') as [Agent['type'], Agent['state'], string];
   useFrame(() => {
-    const a = useStore.getState().ghostSim?.agents[index];
+    const st = useStore.getState();
+    const a = st.ghostSim?.agents[index];
     if (!a || !group.current) return;
-    const [x, , z] = interpolated(level, a, clock.acc / TICK_SEC);
-    group.current.position.set(x, 0, z);
+    const [x, y, z] = interpolated(level, a, clock.acc / TICK_SEC, st.ghostWorld);
+    group.current.position.set(x, y, z);
     group.current.rotation.y = Math.atan2(a.dir[0], a.dir[1]);
   });
   if (!look || state === 'done') return null;

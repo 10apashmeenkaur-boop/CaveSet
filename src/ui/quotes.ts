@@ -2,7 +2,20 @@ import type { IncidentCode } from '../sim/failures';
 
 export type FailureCode = Extract<
   IncidentCode,
-  'TOO_NARROW' | 'HEAD_ON_JAM' | 'SWING_BLOCK' | 'NO_PATH' | 'TIME_LIMIT' | 'DINING_DISTURBED' | 'QUEUE_OVERFLOW' | 'CROSS_FLOW' | 'UNDERUSED_HALL'
+  | 'TOO_NARROW'
+  | 'HEAD_ON_JAM'
+  | 'SWING_BLOCK'
+  | 'NO_PATH'
+  | 'TIME_LIMIT'
+  | 'DINING_DISTURBED'
+  | 'QUEUE_OVERFLOW'
+  | 'CROSS_FLOW'
+  | 'UNDERUSED_HALL'
+  | 'RAMP_TOO_STEEP'
+  | 'TROLLEY_ROLLBACK'
+  | 'NO_REST_LANDING'
+  | 'TIGHT_TURN'
+  | 'NO_ACCESSIBLE_ROUTE'
 >;
 
 /** What people say when a design fails them. Short, casual, under 8 words. Used for banners and speech bubbles. */
@@ -61,6 +74,31 @@ export const QUOTES: Record<FailureCode, string[]> = {
     'Sab log kahan reh gaye?',
     'Roti thandi ho rahi hai!',
   ],
+  RAMP_TOO_STEEP: [
+    'Bhaji, upar nahi chadh pa raha!',
+    'Itni chadhai? Haath dukh gaye.',
+    'Yeh ramp hai ya pahaad?',
+  ],
+  TROLLEY_ROLLBACK: [
+    'Arre, trolley peeche ja rahi hai!',
+    'Pakdo, pakdo! Phisal gayi!',
+    'Bori wapas neeche aa gayi!',
+  ],
+  NO_REST_LANDING: [
+    'Bas, saans phool gayi.',
+    'Thoda rukne ki jagah toh do!',
+    'Itna lamba ramp? Thak gaya.',
+  ],
+  TIGHT_TURN: [
+    'Yahan mudun kaise, ji?',
+    'Wheelchair ghoomegi nahi yahan!',
+    'Jagah toh do mudne ki!',
+  ],
+  NO_ACCESSIBLE_ROUTE: [
+    'Seedhiyan? Main kaise chadhun?',
+    'Mere liye koi raasta nahi?',
+    'Trolley seedhi pe? Na ji.',
+  ],
 };
 
 /** Who says it, shown under banner quotes. */
@@ -74,6 +112,11 @@ export const FAILURE_LABEL: Record<FailureCode, string> = {
   QUEUE_OVERFLOW: 'someone stuck at the entrance',
   CROSS_FLOW: 'a diner, trying to leave',
   UNDERUSED_HALL: 'a sevadar, serving an empty pangat',
+  RAMP_TOO_STEEP: 'a wheelchair sevadar, at a steep ramp',
+  TROLLEY_ROLLBACK: 'a sevadar, chasing a runaway trolley',
+  NO_REST_LANDING: 'a wheelchair sevadar, halfway up',
+  TIGHT_TURN: 'a wheelchair sevadar, stuck at a corner',
+  NO_ACCESSIBLE_ROUTE: 'a wheelchair sevadar, at the foot of the stairs',
 };
 
 export type Quote = { text: string; code: FailureCode };

@@ -1,14 +1,13 @@
 import { LEVELS, SANDBOX } from '../levels';
 import { useStore } from '../store';
 import { useEffect, useState } from 'react';
-import { getSoundSet, getVolume, isMuted, playDemo, setMuted, setSoundSet, setVolume, SOUND_SETS } from '../audio/sfx';
+import { getVolume, isMuted, setMuted, setVolume } from '../audio/sfx';
 import { QuoteBanner } from './QuoteBanner';
 
-/** Sound on/off (off until the player turns it on), volume, and a temporary sound-set test. All remembered per browser. */
+/** Sound on/off (off until the player turns it on) and volume. Both remembered per browser. */
 function SoundControls() {
   const [muted, setM] = useState(isMuted);
   const [volume, setV] = useState(getVolume);
-  const [set, setS] = useState(getSoundSet);
   const toggle = (on: boolean) => {
     setMuted(!on);
     setM(!on);
@@ -37,33 +36,6 @@ function SoundControls() {
         aria-label="Volume"
         title={`Volume ${Math.round(volume * 100)}%`}
       />
-      {/* Temporary: pick a sound set by ear. */}
-      <select
-        className="sound-set"
-        value={set}
-        onChange={(e) => {
-          const i = Number(e.target.value);
-          setSoundSet(i);
-          setS(i);
-        }}
-        aria-label="Sound set"
-      >
-        {SOUND_SETS.map((s, i) => (
-          <option key={s.name} value={i}>
-            Set {i + 1}: {s.name}
-          </option>
-        ))}
-      </select>
-      <button
-        className="btn ghost small"
-        onClick={() => {
-          toggle(true);
-          playDemo();
-        }}
-        title="Plays every sound in this set (turns sound on)"
-      >
-        🔈 Sound test
-      </button>
     </div>
   );
 }

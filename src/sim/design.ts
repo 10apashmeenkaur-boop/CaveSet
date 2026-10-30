@@ -1,22 +1,41 @@
-import { DOUBLE_DOOR_TILES, PERSON_TILES, SINGLE_DOOR_TILES } from './constants';
+import { DOUBLE_DOOR_TILES, LANDING_TILES, PERSON_TILES, RAMP_WIDTH_TILES, SINGLE_DOOR_TILES, STAIR_TILES } from './constants';
 import { getCell, gridFromLevel, idx, inBounds, zoneAt, type Grid } from './grid';
 import type { Level, StationKind, Tile, ToolId } from './types';
 
 export type BuildTool = Exclude<ToolId, 'eraser'>;
 /** Axis a door's width runs along: 'v' = along y (sits in a vertical wall, people pass in x). */
 export type Orient = 'h' | 'v';
-/** Which side of the door a hinged leaf swings into: +1 = +x / +y. For a one-way sign: the direction people may pass. */
+/**
+ * Which side of the door a hinged leaf swings into: +1 = +x / +y. For a one-way sign: the direction people may pass.
+ * For stairs and ramps: the uphill direction along the axis people walk ('v' = along x, like passing through a door).
+ */
 export type Side = 1 | -1;
 
-export type Placed = { id: number; tool: BuildTool; x: number; y: number; orient: Orient; swing: Side };
+/** slope: a ramp's steepness as 1:n. */
+export type Placed = { id: number; tool: BuildTool; x: number; y: number; orient: Orient; swing: Side; slope?: number };
 export type Design = { items: Placed[]; nextId: number };
 export type Draft = Omit<Placed, 'id'>;
 
 export const EMPTY_DESIGN: Design = { items: [], nextId: 1 };
 
+/**
+ * width runs along the orient axis; length (default 1) runs along the walking direction (stairs, ramps).
+ * attach: hangs on another item (a sign on a door, a handrail on a ramp) and goes when that item is erased.
+ */
 export const TOOL_INFO: Record<
   BuildTool,
-  { name: string; cost: number; width: 1 | 2; door: boolean; hinged: boolean; sign?: boolean; station?: StationKind }
+  {
+    name: string;
+    cost: number;
+    width: number;
+    length?: number;
+    door: boolean;
+    hinged: boolean;
+    sign?: boolean;
+    attach?: boolean;
+    station?: StationKind;
+    terrain?: 'ramp' | 'stairs' | 'landing';
+  }
 > = {
   wall: { name: 'Brick wall', cost: 500, width: PERSON_TILES, door: false, hinged: false },
   door1: { name: 'Hinged door', cost: 2000, width: SINGLE_DOOR_TILES, door: true, hinged: true },
@@ -27,7 +46,16 @@ export const TOOL_INFO: Record<
   shoe: { name: 'Shoe stand', cost: 2000, width: PERSON_TILES, door: false, hinged: false, station: 'shoe' },
   tap: { name: 'Hand-wash tap', cost: 1500, width: PERSON_TILES, door: false, hinged: false, station: 'tap' },
   rail: { name: 'Queue rail', cost: 300, width: PERSON_TILES, door: false, hinged: false },
+  stairs: { name: 'Stairs', cost: 4000, width: RAMP_WIDTH_TILES, length: STAIR_TILES, door: false, hinged: false, terrain: 'stairs' },
+  ramp: { name: 'Ramp', cost: 600, width: RAMP_WIDTH_TILES, door: false, hinged: false, terrain: 'ramp' },
+  landing: { name: 'Landing 3×3', cost: 1200, width: LANDING_TILES, door: false, hinged: false, terrain: 'landing' },
+  handrail: { name: 'Handrail', cost: 200, width: PERSON_TILES, door: false, hinged: false, attach: true },
 };
+
+/** Uphill direction of a stair or ramp. */
+export function upDir(item: { orient: Orient; swing: Side }): Tile {
+  return item.orient === 'v' ? [item.swing, 0] : [0, item.swing];
+}
 
 const STATION_NAME: Record<StationKind, string> = { shoe: 'Shoe stands', tap: 'Taps', basket: 'Baskets' };
 
@@ -46,14 +74,29 @@ export function stationsOf(level: Level, design: Design): { kind: StationKind; t
 }
 
 const isSign = (it: Draft) => !!TOOL_INFO[it.tool].sign;
+/** Signs and handrails: they hang on something else. */
+const isAttached = (it: Draft) => !!TOOL_INFO[it.tool].sign || !!TOOL_INFO[it.tool].attach;
 
 const key = (x: number, y: number) => `${x},${y}`;
 
-/** Tiles the item itself occupies. 2-wide doors extend along their orient axis. */
+/**
+ * Tiles the item itself occupies. 2-wide doors, stairs and ramps extend along their orient axis (+x / +y);
+ * stairs also run `length` tiles uphill. A landing is centred on its tile.
+ */
 export function itemTiles(item: Draft): Tile[] {
+  const info = TOOL_INFO[item.tool];
+  if (info.terrain === 'landing') {
+    const r = Math.floor(info.width / 2);
+    const tiles: Tile[] = [];
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) tiles.push([item.x + dx, item.y + dy]);
+    return tiles;
+  }
+  const [ux, uy] = upDir(item);
   const tiles: Tile[] = [];
-  for (let i = 0; i < TOOL_INFO[item.tool].width; i++) {
-    tiles.push(item.orient === 'v' ? [item.x, item.y + i] : [item.x + i, item.y]);
+  for (let j = 0; j < (info.length ?? 1); j++) {
+    for (let i = 0; i < info.width; i++) {
+      tiles.push(item.orient === 'v' ? [item.x + j * ux, item.y + i] : [item.x + i, item.y + j * uy]);
+    }
   }
   return tiles;
 }
@@ -92,7 +135,7 @@ export function signOn(design: Design, door: Draft): Placed | undefined {
 export function itemAt(design: Design, x: number, y: number): Placed | undefined {
   const door = doorAt(design, x, y);
   if (door) return signOn(design, door) ?? door;
-  return design.items.find((it) => !isSign(it) && covers(it, x, y));
+  return design.items.find((it) => !isAttached(it) && covers(it, x, y));
 }
 
 /** A sign draft snaps to the door under it: same anchor tile and axis, keeping its arrow direction. */
@@ -115,8 +158,20 @@ export function checkPlace(level: Level, design: Design, draft: Draft): PlaceChe
     return { ok: true };
   }
 
+  if (info.attach) {
+    const under = itemAt(design, draft.x, draft.y);
+    if (!under || !(TOOL_INFO[under.tool].terrain === 'ramp' || TOOL_INFO[under.tool].terrain === 'stairs')) {
+      return { ok: false, reason: 'Put the handrail on a ramp or stairs.' };
+    }
+    if (design.items.some((it) => it.tool === draft.tool && it.x === draft.x && it.y === draft.y)) {
+      return { ok: false, reason: 'There is already a handrail here.' };
+    }
+    return { ok: true };
+  }
+
   const base = gridFromLevel(level);
-  const taken = new Set(design.items.filter((it) => !isSign(it)).flatMap((it) => itemTiles(it).map(([x, y]) => key(x, y))));
+  const taken = new Set(design.items.filter((it) => !isAttached(it)).flatMap((it) => itemTiles(it).map(([x, y]) => key(x, y))));
+  const rise = level.rise;
   // Nobody may build where people stand to use a station.
   const serving = new Set(stationsOf(level, design).map(({ serve: [x, y] }) => key(x, y)));
 
@@ -129,6 +184,8 @@ export function checkPlace(level: Level, design: Design, draft: Draft): PlaceChe
     if (cell === 'noWalk') return { ok: false, reason: 'People are eating there. No construction in the dining hall!' };
     if (cell === 'station') return { ok: false, reason: 'A station is already there.' };
     if (!info.door && cell === 'wall') return { ok: false, reason: 'There is already a wall there.' };
+    if (rise && zoneAt(level, x, y) === rise.zone) return { ok: false, reason: 'That is the roof. Build on the ground, up to it.' };
+    if (rise && zoneAt(level, x, y) === rise.yard) return { ok: false, reason: 'Keep the yard clear: people arrive here.' };
   }
 
   if (info.station) {
@@ -172,23 +229,31 @@ export function objectTiles(item: Draft): Tile[] {
  * or a station whose standing spot is there. (A door's sign goes with the door.)
  */
 export function eraseTarget(design: Design, x: number, y: number): Placed | undefined {
-  const objects = design.items.filter((it) => !isSign(it));
+  const objects = design.items.filter((it) => !isAttached(it));
   return objects.find((it) => covers(it, x, y)) ?? objects.find((it) => objectTiles(it).some(([tx, ty]) => tx === x && ty === y));
 }
 
-/** Remove the whole object at (x, y); a removed door takes its sign with it. Design mode refunds 100%. */
+/** Remove the whole object at (x, y); a removed door takes its sign with it, a ramp or stairs its handrails. Design mode refunds 100%. */
 export function eraseAt(design: Design, x: number, y: number): Design {
   const hit = eraseTarget(design, x, y);
   if (!hit) return design;
   const sign = TOOL_INFO[hit.tool].door ? signOn(design, hit) : undefined;
-  return { ...design, items: design.items.filter((it) => it !== hit && it !== sign) };
+  const rails = new Set(handrailsOn(design, hit));
+  return { ...design, items: design.items.filter((it) => it !== hit && it !== sign && !rails.has(it)) };
+}
+
+/** Handrails hung on this ramp or stairs. */
+export function handrailsOn(design: Design, item: Draft): Placed[] {
+  if (!TOOL_INFO[item.tool].terrain) return [];
+  return design.items.filter((it) => TOOL_INFO[it.tool].attach && covers(item, it.x, it.y));
 }
 
 /** Level grid with the player's design applied. Doors cut through fixed walls. */
 export function buildGrid(level: Level, design: Design): Grid {
   const grid = gridFromLevel(level);
   for (const it of design.items) {
-    if (isSign(it)) continue;
+    // Stairs, ramps and landings are still floor; their heights live in the terrain (terrain.ts).
+    if (isAttached(it) || TOOL_INFO[it.tool].terrain) continue;
     const cell = it.tool === 'wall' ? 'wall' : it.tool === 'rail' ? 'rail' : TOOL_INFO[it.tool].station ? 'station' : 'door';
     for (const [x, y] of itemTiles(it)) grid.cells[idx(grid, x, y)] = cell;
   }

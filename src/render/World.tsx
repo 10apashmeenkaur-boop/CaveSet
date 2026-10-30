@@ -1,5 +1,6 @@
 import { Html } from '@react-three/drei';
 import { useMemo } from 'react';
+import { TILE_M } from '../sim/constants';
 import { getCell, gridFromLevel } from '../sim/grid';
 import type { Level, Zone } from '../sim/types';
 import { WALL_H } from './Items';
@@ -17,6 +18,8 @@ const ZONE_NAMES: Record<string, string> = {
   wash: 'Hand wash',
   basket: 'Head covers',
   hall: 'Dining hall',
+  roof: 'Roof storage',
+  yard: 'Yard',
 };
 
 function zoneCenter(level: Level, z: Zone): [number, number, number] {
@@ -37,6 +40,7 @@ export function Floor({ level }: { level: Level }) {
         <meshStandardMaterial color={COLORS.floor} />
       </mesh>
       {Object.entries(level.zones).map(([name, z]) => {
+        if (name === level.rise?.zone) return null; // drawn on top of the roof deck instead
         const [cx, , cz] = zoneCenter(level, z);
         return (
           <mesh key={name} rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.005, cz]} receiveShadow>
@@ -90,8 +94,10 @@ export function Signboards({ level }: { level: Level }) {
       {spots.map(({ name, tile, onWall }) => {
         const [wx, , wz] = tileToWorld(level, ...tile);
         const top = onWall ? WALL_H : SIGN_POST_H;
+        // A raised zone's sign stands on its deck.
+        const base = name === level.rise?.zone ? level.rise.heightM / TILE_M : 0;
         return (
-          <group key={name} position={[wx, 0, wz]}>
+          <group key={name} position={[wx, base, wz]}>
             {!onWall && (
               <mesh position={[0, SIGN_POST_H / 2, 0]} castShadow>
                 <cylinderGeometry args={[0.05, 0.06, SIGN_POST_H, 8]} />

@@ -2,9 +2,10 @@ import type { Level } from '../sim/types';
 import l1 from './l1-doorway.json';
 import l2 from './l2-corridor.json';
 import l3 from './l3-queue.json';
+import l4 from './l4-ramp.json';
 
 // JSON arrays infer as number[][], not tuples — levels are trusted data.
-export const LEVELS = [l1, l2, l3] as unknown as Level[];
+export const LEVELS = [l1, l2, l3, l4] as unknown as Level[];
 
 export const SANDBOX: Level = {
   id: 'sandbox',

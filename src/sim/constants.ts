@@ -116,3 +116,41 @@ export const UNDERUSED_SHARE = 0.5;
 export const SEAT_RETRY_TICKS = 10;
 /** The busiest-station marker only shows once this many people are heading for or waiting at one unit. */
 export const BUSY_MARKER_MIN = 3;
+
+// ─── 3. Ramp to the roof (Level 4) ──────────────────────────────────────────────────────
+
+/** Walking with a ~25 kg sack on the shoulder: ~0.9 m/s. */
+export const SACK_SPEED = mps(0.9);
+/** Pushing a loaded sack trolley on the flat: ~0.8 m/s. */
+export const TROLLEY_SPEED = mps(0.8);
+/** Ramp slopes on offer, as 1:n. Rise per tile = TILE_M / n: 1:12 rises 5 cm per tile, so 1.2 m takes 24 tiles. */
+export const RAMP_SLOPES = [6, 8, 12] as const;
+/** Stairs: 8 risers of 15 cm on 30 cm treads = 1.2 m up over 2.4 m (4 tiles), 2 tiles (1.2 m) wide. */
+export const STAIR_STEPS = 8;
+export const STAIR_TILES = 4;
+/** A ramp is 1.2 m wide (2 tiles): the minimum for a wheelchair in Indian accessibility guidelines. */
+export const RAMP_WIDTH_TILES = 2;
+/** Landings are 3×3 tiles (1.8 m square), enough for a wheelchair to turn (needs ~1.5 m). */
+export const LANDING_TILES = WHEELCHAIR_TURN_TILES;
+/** Rest landing at least every ~9 m of ramp = 15 tiles. */
+export const RAMP_REST_TILES = Math.floor(RAMP_LANDING_EVERY_M / TILE_M);
+/** Someone on foot can step up or down a lip this high; wheels need the edges to meet exactly. */
+export const STEP_UP_MAX_M = STAIR_MAX_RISER_M;
+
+/**
+ * Speed on slopes, as a share of flat-ground speed (game estimates from watching people climb).
+ * Elderly visitors tire quickly on stairs; a handrail helps them a little.
+ */
+export const SLOPE_SPEED = {
+  ramp: { walk: 0.85, elderly: 0.9, wheel: 0.7 },
+  stairs: { walk: 0.5, elderly: 0.25, elderlyRail: 0.4 },
+  /** With a handrail, an elderly visitor walks a ramp at full speed. */
+  rampRail: { elderly: 1 },
+} as const;
+/** Elderly visitors avoid stairs when they can: each stair tile counts as this many steps when they choose a route. */
+export const ELDERLY_STAIRS_COST = 12;
+/** A wheelchair route turning costs this much extra, so routes run straight where they can. */
+export const TURN_COST = 0.4;
+/** A trolley pushed up a too-steep ramp makes it this many tiles before it rolls back down, at this speed. */
+export const ROLLBACK_AFTER_TILES = 3;
+export const ROLLBACK_SPEED = mps(1.5);

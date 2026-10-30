@@ -10,6 +10,8 @@ import { AgentsLayer, BestRunGhosts, DinerBubbles, SimRunner } from './Agents';
 import { AudioDirector, CameraDirector, Lighting } from './Feel';
 import { EditableGlow, RouteArrows } from './Onboarding';
 import { BusiestMarker, HeatLayer, IncidentTiles } from './Overlays';
+import { RoofDeck, TerrainLayer } from './Terrain';
+import { TOOL_INFO } from '../sim/design';
 
 // Isometric-ish view: ~45° yaw, ~35° pitch.
 const YAW = Math.PI / 4;
@@ -26,6 +28,8 @@ const MOUSE_BUTTONS = { LEFT: -1 as MOUSE, MIDDLE: MOUSE.PAN, RIGHT: MOUSE.PAN }
 
 export function Scene({ level }: { level: Level }) {
   const mode = useStore((s) => s.mode);
+  // The pulsing wall outline only helps where doors can go.
+  const doors = level.allowedTools.some((t) => t !== 'eraser' && TOOL_INFO[t].door);
   return (
     <Canvas shadows style={{ background: COLORS.background }} onContextMenu={(e) => e.preventDefault()}>
       <OrthographicCamera makeDefault position={CAM_POS} zoom={42} near={0.1} far={200} />
@@ -35,12 +39,14 @@ export function Scene({ level }: { level: Level }) {
       <AudioDirector level={level} />
       <Floor level={level} />
       <Props level={level} />
+      {level.rise && <RoofDeck level={level} />}
+      {level.rise && <TerrainLayer level={level} />}
       <Signboards level={level} />
       <RouteArrows level={level} />
       <DesignLayer level={level} />
       {mode === 'design' && (
         <>
-          <EditableGlow level={level} />
+          {doors && <EditableGlow level={level} />}
           <GhostLayer level={level} />
         </>
       )}

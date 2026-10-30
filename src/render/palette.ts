@@ -31,6 +31,8 @@ export const COLORS = {
     wash: '#a9d6e5',
     basket: '#f2d3e3',
     hall: '#c7e3b0',
+    roof: '#f6dca6',
+    yard: '#cfe3c0',
   } as Record<string, string>,
   shoeRack: '#b98b5e',
   slot: '#6b4a32',
@@ -45,6 +47,18 @@ export const COLORS = {
   routeIn: '#2f9e8f',
   routeOut: '#e07b24',
   post: '#8a5a3b',
+  /** Ramp level. */
+  deck: '#e9dcc6',
+  sack: '#d8c08e',
+  ramp: '#b9b0a3',
+  rampTop: '#ece6dc',
+  stairs: '#cfc6b8',
+  stairsAlt: '#c2b8a8',
+  landing: '#e2dbcf',
+  handrail: '#5f6b7a',
+  chair: '#4f6d8f',
+  wheel: '#33363d',
+  cart: '#7b8794',
 };
 
 /** Shirt colour tells you what someone is doing. */
@@ -55,6 +69,9 @@ export const SHIRT: Record<AgentType, string> = {
   elderly: '#9fb4c7',
   /** Visitors wear their own clothes: the renderer picks one of the muted diner colours per person. */
   sangat: '#e9b8c4',
+  sack: '#8fc27d',
+  wheelchair: '#7fb2e5',
+  trolley: '#e58f7f',
 };
 
 export const SKIN = ['#f5d0b5', '#e0ac85', '#c68a62', '#8d5a3b'];

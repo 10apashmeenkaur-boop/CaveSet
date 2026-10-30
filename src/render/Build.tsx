@@ -4,12 +4,13 @@ import { buildGrid, doorAt, eraseTarget, itemTiles, objectTiles, serveTile, stat
 import { getCell } from '../sim/grid';
 import { EMPTY_DESIGN } from '../sim/design';
 import type { Level } from '../sim/types';
-import { resolveDraft, useStore } from '../store';
+import { rampDraft, resolveDraft, useStore } from '../store';
 import { sfx } from '../audio/sfx';
 import { tileToWorld } from './coords';
 import { DropIn } from './Feel';
 import { DoorItem, RailItem, SignItem, StationItem, WALL_H, WallBlock } from './Items';
 import { COLORS } from './palette';
+import { surfaceY, TerrainGhost, terrainOf } from './Terrain';
 
 /** Every wall tile (fixed + placed) and every placed door. */
 export function DesignLayer({ level }: { level: Level }) {
@@ -78,7 +79,8 @@ function TileOutline({ level, x, y, color }: { level: Level; x: number; y: numbe
 
 /** Translucent preview of what a click would build, green if allowed and red if not. */
 export function GhostLayer({ level }: { level: Level }) {
-  const { hover, tool, orientIdx, design } = useStore();
+  const { hover, tool, orientIdx, design, slopeIdx, rampDir } = useStore();
+  const t = useMemo(() => terrainOf(level, design), [level, design]);
   if (!hover) return null;
   const [x, y] = hover;
 
@@ -102,7 +104,7 @@ export function GhostLayer({ level }: { level: Level }) {
         })}
         {itemTiles(hit).map(([tx, ty]) => {
           const [wx, , wz] = tileToWorld(level, tx, ty);
-          const h = hit.tool === 'wall' || TOOL_INFO[hit.tool].door ? WALL_H : 0.9;
+          const h = hit.tool === 'wall' || TOOL_INFO[hit.tool].door ? WALL_H : TOOL_INFO[hit.tool].terrain ? surfaceY(t, tx, ty) + 0.25 : 0.9;
           return (
             <mesh key={`shell-${tx},${ty}`} position={[wx, h / 2, wz]}>
               <boxGeometry args={[1.06, h + 0.06, 1.06]} />
@@ -114,9 +116,20 @@ export function GhostLayer({ level }: { level: Level }) {
     );
   }
 
-  const { draft, check, relevant } = resolveDraft(level, design, tool, x, y, orientIdx);
+  const ramp = tool === 'ramp' ? rampDraft({ design, slopeIdx, rampDir }, x, y) : undefined;
+  const { draft, check, relevant } = resolveDraft(level, design, tool, x, y, orientIdx, ramp);
   if (!relevant) return null; // nothing to build here: no ghost, no red
   const ghost = check.ok ? 'ok' : 'bad';
+  if (TOOL_INFO[tool].terrain || TOOL_INFO[tool].attach) {
+    return (
+      <group>
+        {itemTiles(draft).map(([tx, ty]) => (
+          <TileOutline key={`${tx},${ty}`} level={level} x={tx} y={ty} color={COLORS.hover} />
+        ))}
+        <TerrainGhost level={level} design={design} draft={draft} ghost={ghost} />
+      </group>
+    );
+  }
   if (TOOL_INFO[tool].sign) {
     const door = doorAt(design, x, y);
     return door ? <SignItem level={level} door={door} arrow={draft.swing} ghost={ghost} /> : null;
@@ -183,8 +196,9 @@ export function InteractionPlane({ level }: { level: Level }) {
         const prev = s.hover;
         if (t?.[0] === prev?.[0] && t?.[1] === prev?.[1]) return;
         s.setHover(t);
-        // Drag-paint walls, rails and erasing; doors and stations are one per click.
-        if (t && painting.current && (s.tool === 'wall' || s.tool === 'rail' || s.tool === 'eraser')) act(painting.current, ...t);
+        // Drag-paint walls, rails, ramps, handrails and erasing; doors, stations, stairs and landings are one per click.
+        const paints = s.tool === 'wall' || s.tool === 'rail' || s.tool === 'ramp' || s.tool === 'handrail' || s.tool === 'eraser';
+        if (t && painting.current && paints) act(painting.current, ...t);
       }}
       onPointerLeave={() => useStore.getState().setHover(null)}
       onPointerDown={(e) => {
@@ -192,6 +206,7 @@ export function InteractionPlane({ level }: { level: Level }) {
         if (e.button === 2) rightDown.current = { x: e.clientX, y: e.clientY };
         if (e.button !== 0 || !t) return;
         painting.current = 'build';
+        useStore.getState().startDrag();
         act('build', ...t);
       }}
       onPointerUp={(e) => {

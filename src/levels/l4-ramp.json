@@ -1,0 +1,47 @@
+{
+  "id": "l4-ramp",
+  "title": "Ramp to the Roof",
+  "brief": "Sacks go up to roof storage, 1.2 m up: 6 carriers, 2 trolleys, a wheelchair sevadar and an elderly visitor. Everyone gets up. Budget ₹20,000.",
+  "goalLabel": "⬆ {n}/{total} on the roof",
+  "mistri": {
+    "brief": "Bori bhi upar jaayegi, wheelchair bhi. Jagah dekh ke banana.",
+    "hints": {
+      "NO_ACCESSIBLE_ROUTE": "Seedhi sab ke liye nahi hoti, puttar.",
+      "RAMP_TOO_STEEP": "Wheelchair kitni chadhai le sakti hai? Pehle naapo.",
+      "TROLLEY_ROLLBACK": "Bhaari trolley dheemi dhalaan maangti hai.",
+      "TIGHT_TURN": "Mudne ke liye poori jagah chahiye, kone mein nahi.",
+      "NO_REST_LANDING": "Lamba ramp? Beech mein saans lene do.",
+      "NO_PATH": "Zameen se chhat tak raasta judna chahiye.",
+      "TIME_LIMIT": "Dekho kaun sabse dheere chal raha hai, aur kyon.",
+      "default": "Pehle naapo: kitna lamba ramp chahiye, kitni jagah hai?"
+    }
+  },
+  "insight": {
+    "title": "Accessible design needs space, so plan it first.",
+    "principle": "A ramp gentle enough for a wheelchair is long. Fold it into a switchback with landings, and give it its space before anything else is built.",
+    "example": "Well-planned stations and hospitals draw their ramps first. Ramps squeezed in later end up too steep or too tight to turn.",
+    "number": "1.2 m up at 1:12 takes 14.4 m of ramp, with a flat landing at least every 9 m.",
+    "quote": "Ramp baad mein nahi, pehle socho, puttar."
+  },
+  "grid": { "w": 20, "h": 12 },
+  "fixedWalls": [],
+  "editableTiles": "all",
+  "zones": {
+    "roof": { "x": 0, "y": 0, "w": 5, "h": 7 },
+    "yard": { "x": 0, "y": 9, "w": 4, "h": 3 }
+  },
+  "noWalk": [],
+  "rise": { "zone": "roof", "heightM": 1.2, "yard": "yard" },
+  "spawns": [
+    { "type": "sack", "from": "yard", "to": "roof", "count": 6, "every": 30 },
+    { "type": "elderly", "from": "yard", "to": "roof", "count": 1, "every": 1, "delay": 15 },
+    { "type": "wheelchair", "from": "yard", "to": "roof", "count": 1, "every": 1, "delay": 45 },
+    { "type": "trolley", "from": "yard", "to": "roof", "count": 2, "every": 90, "delay": 75 }
+  ],
+  "budget": 20000,
+  "timeLimitSec": 90,
+  "targetSec": 65,
+  "starCost": 17000,
+  "seed": 1,
+  "allowedTools": ["ramp", "landing", "stairs", "handrail"]
+}

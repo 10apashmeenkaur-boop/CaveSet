@@ -4,7 +4,20 @@ import type { SimState } from './simulate';
 import type { Level } from './types';
 
 /** Incidents that mean the job wasn't done properly, even if everything arrived. */
-const FAILS: IncidentCode[] = ['NO_PATH', 'TOO_NARROW', 'TIME_LIMIT', 'DINING_DISTURBED', 'QUEUE_OVERFLOW', 'CROSS_FLOW', 'UNDERUSED_HALL'];
+const FAILS: IncidentCode[] = [
+  'NO_PATH',
+  'TOO_NARROW',
+  'TIME_LIMIT',
+  'DINING_DISTURBED',
+  'QUEUE_OVERFLOW',
+  'CROSS_FLOW',
+  'UNDERUSED_HALL',
+  'RAMP_TOO_STEEP',
+  'TROLLEY_ROLLBACK',
+  'NO_REST_LANDING',
+  'TIGHT_TURN',
+  'NO_ACCESSIBLE_ROUTE',
+];
 /** Incidents people grumble about: shown as complaints, they don't cost the pass. */
 const COMPLAINTS: IncidentCode[] = ['HEAD_ON_JAM', 'SWING_BLOCK'];
 
@@ -45,7 +58,11 @@ export function score(level: Level, sim: SimState, cost: number): Score {
     {
       label: 'Function',
       ok: passed,
-      detail: level.queue
+      detail: level.rise
+        ? passed
+          ? `All ${sim.totalTasks} up on the roof, wheels and all.`
+          : `${sim.delivered} of ${sim.totalTasks} got up to the roof.`
+        : level.queue
         ? passed
           ? `All ${sim.totalTasks} sangat seated, no spills, no crossing.`
           : `${sim.delivered} of ${sim.totalTasks} sangat seated.`

@@ -6,11 +6,14 @@ import { COLORS } from './palette';
 import type { Level } from '../sim/types';
 import { useStore } from '../store';
 import { tileToWorld } from './coords';
+import { surfaceY } from './Terrain';
 
 function FloorTile({ level, x, y, color, opacity }: { level: Level; x: number; y: number; color: string; opacity: number }) {
   const [wx, , wz] = tileToWorld(level, x, y);
+  // On the ramp level, sit on whatever surface is there (roof, landing, ramp).
+  const h = surfaceY(useStore.getState().world?.terrain, x, y);
   return (
-    <mesh position={[wx, 0.025, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+    <mesh position={[wx, 0.025 + h + (h ? 0.06 : 0), wz]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[0.96, 0.96]} />
       <meshBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} />
     </mesh>

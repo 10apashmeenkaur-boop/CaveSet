@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { TOOL_INFO, type BuildTool } from '../sim/design';
 import type { Level, ToolId } from '../sim/types';
-import { orientationOf, resolveDraft, useStore } from '../store';
+import { RAMP_SLOPES } from '../sim/constants';
+import { orientationOf, rampDraft, resolveDraft, useStore } from '../store';
 
 const ICON: Record<ToolId, string> = {
   wall: '🧱',
@@ -13,18 +14,24 @@ const ICON: Record<ToolId, string> = {
   shoe: '👟',
   tap: '🚰',
   rail: '🚧',
+  stairs: '🪜',
+  ramp: '📐',
+  landing: '🟫',
+  handrail: '🤚',
   eraser: '🧽',
 };
 
 export const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 export function Toolbar({ level }: { level: Level }) {
-  const { tool, setTool, rotate, orientIdx, clearDesign, design, hover } = useStore();
+  const { tool, setTool, rotate, orientIdx, slopeIdx, rampDir, clearDesign, design, hover } = useStore();
   const tools = useMemo<ToolId[]>(() => [...level.allowedTools, 'eraser'], [level]);
   const [orient, swing] = orientationOf(orientIdx);
   const isDoor = tool !== 'eraser' && TOOL_INFO[tool].door;
   const isSign = tool !== 'eraser' && !!TOOL_INFO[tool].sign;
   const isStation = tool !== 'eraser' && !!TOOL_INFO[tool].station;
+  const isRamp = tool === 'ramp';
+  const isStairs = tool === 'stairs';
   const arrow = orient === 'v' ? (swing === 1 ? '→' : '←') : swing === 1 ? '↓' : '↑';
 
   useEffect(() => {
@@ -43,7 +50,9 @@ export function Toolbar({ level }: { level: Level }) {
   // Why the ghost is red, if it is.
   let blocked: string | null = null;
   if (hover && tool !== 'eraser') {
-    const r = resolveDraft(level, design, tool, hover[0], hover[1], orientIdx);
+    const r = isRamp
+      ? resolveDraft(level, design, tool, hover[0], hover[1], orientIdx, rampDraft({ design, slopeIdx, rampDir }, hover[0], hover[1]))
+      : resolveDraft(level, design, tool, hover[0], hover[1], orientIdx);
     if (r.relevant && !r.check.ok) blocked = r.check.reason;
   }
 
@@ -59,19 +68,29 @@ export function Toolbar({ level }: { level: Level }) {
           </button>
         ))}
         <div className="tool-side">
-          <button className="btn ghost small" onClick={rotate} disabled={!isDoor && !isSign && !isStation} title="Shortcut: R">
+          <button className="btn ghost small" onClick={rotate} disabled={!isDoor && !isSign && !isStation && !isRamp && !isStairs} title="Shortcut: R">
             {isSign
               ? `⟳ Flip arrow (${swing === 1 ? 'right/down' : 'left/up'})`
               : isStation
                 ? `⟳ Faces ${arrow}`
-                : `⟳ ${orient === 'v' ? 'Vertical' : 'Horizontal'} · swings ${arrow}`}
+                : isRamp
+                  ? `⟳ Slope 1:${RAMP_SLOPES[slopeIdx]}`
+                  : isStairs
+                    ? `⟳ Up ${arrow}`
+                    : `⟳ ${orient === 'v' ? 'Vertical' : 'Horizontal'} · swings ${arrow}`}
           </button>
           <button className="btn ghost small" onClick={clearDesign} disabled={!design.items.length}>
             Clear all
           </button>
         </div>
       </div>
-      <div className="controls-hint">Left click: build · drag: paint walls · right click: erase · right drag: pan · scroll: zoom · R: rotate door</div>
+      <div className="controls-hint">
+        {isRamp
+          ? 'Drag uphill: paint a ramp · R: slope · right click: erase · right drag: pan · scroll: zoom'
+          : isStairs
+            ? 'Left click: build · R: turn the stairs · right click: erase · right drag: pan · scroll: zoom'
+            : 'Left click: build · drag: paint walls · right click: erase · right drag: pan · scroll: zoom · R: rotate door'}
+      </div>
     </div>
   );
 }

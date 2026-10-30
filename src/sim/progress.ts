@@ -29,6 +29,11 @@ export const HINT_AFTER_FAILS = 2;
 
 /** Codes in the order a hint should address them: what blocks the run outright first. */
 const HINT_ORDER: IncidentCode[] = [
+  'NO_ACCESSIBLE_ROUTE',
+  'RAMP_TOO_STEEP',
+  'TROLLEY_ROLLBACK',
+  'TIGHT_TURN',
+  'NO_REST_LANDING',
   'NO_PATH',
   'TOO_NARROW',
   'DINING_DISTURBED',

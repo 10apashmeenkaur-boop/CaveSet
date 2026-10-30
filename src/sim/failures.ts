@@ -1,4 +1,4 @@
-import { goingIn, type Agent } from './agents';
+import { AGENT_INFO, goingIn, type Agent, type StuckReason } from './agents';
 import { CONGESTION_TICKS, CROSS_FLOW_TICKS, HEAD_ON_TICKS, QUEUE_SPILL_TICKS, SWING_TICKS, UNDERUSED_SHARE } from './constants';
 import type { StationKind, Tile, Zone } from './types';
 
@@ -13,7 +13,12 @@ export type IncidentCode =
   | 'OVER_BUDGET'
   | 'QUEUE_OVERFLOW'
   | 'CROSS_FLOW'
-  | 'UNDERUSED_HALL';
+  | 'UNDERUSED_HALL'
+  | 'RAMP_TOO_STEEP'
+  | 'TROLLEY_ROLLBACK'
+  | 'NO_REST_LANDING'
+  | 'TIGHT_TURN'
+  | 'NO_ACCESSIBLE_ROUTE';
 
 /** The "why it went wrong" card. */
 export type Incident = {
@@ -87,6 +92,48 @@ export const PRINCIPLES: Record<IncidentCode, { title: string; principle: string
     principle: 'The slowest step limits the whole line. Speeding up any other step changes nothing.',
     hint: 'Watch the busiest-station marker. More taps won’t help if the shoe stand is the slow one.',
   },
+  RAMP_TOO_STEEP: {
+    title: 'Gentle slopes only',
+    principle: 'A wheelchair user can push up a 1:12 slope at most: 1 m of height needs 12 m of ramp.',
+    hint: 'Press R for a gentler slope. A gentler ramp is longer, so plan where it goes.',
+  },
+  TROLLEY_ROLLBACK: {
+    title: 'Loads roll downhill',
+    principle: 'A heavy trolley on a steep ramp pulls back harder than anyone can push. Keep it to 1:12.',
+    hint: 'Use 1:12 for the whole ramp the trolley takes.',
+  },
+  NO_REST_LANDING: {
+    title: 'Give people a rest',
+    principle: 'Long ramps tire wheelchair users. Put a flat landing at least every 9 m of ramp.',
+    hint: 'Break the long ramp with a landing.',
+  },
+  TIGHT_TURN: {
+    title: 'Room to turn',
+    principle: 'A wheelchair needs about 1.5 m of flat floor to turn. Every turn on a ramp needs a full landing.',
+    hint: 'Turn on landings, and make sure the whole width of each ramp meets one.',
+  },
+  NO_ACCESSIBLE_ROUTE: {
+    title: 'Stairs aren’t for everyone',
+    principle: 'Stairs leave out wheelchairs and trolleys. There must be a step-free way up.',
+    hint: 'Build a ramp all the way up, from the ground to the roof.',
+  },
+};
+
+/** Ramp-level stuck reasons and the failure each one is. */
+const RAMP_FAILS: Partial<Record<StuckReason, IncidentCode>> = {
+  'too-steep': 'RAMP_TOO_STEEP',
+  rollback: 'TROLLEY_ROLLBACK',
+  exhausted: 'NO_REST_LANDING',
+  'tight-turn': 'TIGHT_TURN',
+  'no-access': 'NO_ACCESSIBLE_ROUTE',
+};
+
+const RAMP_TITLES: Partial<Record<IncidentCode, (who: string) => [string, string]>> = {
+  RAMP_TOO_STEEP: (who) => ['The ramp was too steep', `${who} couldn’t push up the ramp. Steeper than 1:12 is too much.`],
+  TROLLEY_ROLLBACK: (who) => ['A trolley rolled back down', `${who} got partway up the steep ramp and slid back to the bottom.`],
+  NO_REST_LANDING: (who) => ['No landing to rest on', `${who} ran out of strength after 15 tiles (9 m) of ramp with no flat landing.`],
+  TIGHT_TURN: (who) => ['No room to turn', `${who} couldn’t turn here: a turn needs a 3×3 landing that the whole ramp meets.`],
+  NO_ACCESSIBLE_ROUTE: (who) => ['No step-free way up', `${who} had no way up without steps.`],
 };
 
 
@@ -111,6 +158,8 @@ export function complaintOf(a: Agent, others: Map<string, Agent>, timeUp: boolea
   if (a.state === 'done' || a.state === 'seated') return undefined;
   if (a.stuckReason === 'no-path') return 'NO_PATH';
   if (a.stuckReason === 'too-narrow') return 'TOO_NARROW';
+  const ramp = a.stuckReason && RAMP_FAILS[a.stuckReason];
+  if (ramp) return ramp;
   if (a.waitReason === 'swing' && a.waitTicks >= SWING_TICKS) return 'SWING_BLOCK';
   const b = a.blocker ? others.get(a.blocker) : undefined;
   if (a.waitReason === 'occupied' && a.waitTicks >= CROSS_FLOW_TICKS && crossing(a, b)) return 'CROSS_FLOW';
@@ -156,6 +205,8 @@ export type DetectInput = {
   gridW: number;
   /** Langar line levels: the entrance zone, number of hall seats, and the longest line each station kind had. */
   queue?: { entrance: Zone; seats: number; peak: Partial<Record<StationKind, number>> };
+  /** Ramp level: everyone is going up to the roof. */
+  rise?: boolean;
 };
 
 const STATION_LABEL: Record<StationKind, string> = { shoe: 'shoe stand', tap: 'hand-wash tap', basket: 'head-cover basket' };
@@ -187,6 +238,17 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
       inc.count = inc.agents.length;
       inc.title = 'Crate carriers got stuck at a narrow door';
       inc.evidence = `${plural(inc.count, 'crate carrier')} couldn’t fit through the 1-tile opening at ${where(inc.tiles[0])}.`;
+    }
+
+    const ramp = a.stuckReason && RAMP_FAILS[a.stuckReason];
+    if (ramp && a.state === 'stuck') {
+      const inc = record(list, ramp, d.tick, [a.pos], [a.id], 'global');
+      if (inc.count !== inc.agents.length) {
+        inc.count = inc.agents.length;
+        const who = inc.agents.length === 1 ? `The ${AGENT_INFO[a.type].label.toLowerCase()}` : `${inc.count} people`;
+        [inc.title, inc.evidence] = RAMP_TITLES[ramp]!(who);
+        inc.evidence += ` (at ${where(inc.tiles[0])})`;
+      }
     }
 
     if (a.waitReason === 'swing' && a.waitTicks === SWING_TICKS) {
@@ -238,7 +300,9 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
     inc.title = 'Ran out of time';
     inc.evidence = d.queue
       ? `Only ${d.delivered} of ${d.totalTasks} sangat got to sit down in ${d.timeLimitSec}s.`
-      : `Only ${d.delivered} of ${d.totalTasks} loads were delivered in ${d.timeLimitSec}s.`;
+      : d.rise
+        ? `Only ${d.delivered} of ${d.totalTasks} got up to the roof in ${d.timeLimitSec}s.`
+        : `Only ${d.delivered} of ${d.totalTasks} loads were delivered in ${d.timeLimitSec}s.`;
   }
 
   if (d.queue && d.timeUp && d.delivered < d.queue.seats * UNDERUSED_SHARE && !list.some((i) => i.code === 'UNDERUSED_HALL')) {
@@ -250,7 +314,7 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
   }
 
   // Langar lines are meant to queue; their crowding shows up as QUEUE_OVERFLOW / UNDERUSED_HALL instead.
-  if (d.ended && !d.queue && !list.some((i) => i.code === 'CONGESTION')) {
+  if (d.ended && !d.queue && !d.rise && !list.some((i) => i.code === 'CONGESTION')) {
     const hot: Tile[] = [];
     let worst = 0;
     d.heat.forEach((v, i) => {
