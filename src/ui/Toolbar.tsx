@@ -10,6 +10,9 @@ const ICON: Record<ToolId, string> = {
   slide1: '↔️',
   slide2: '⇔',
   oneway: '➡️',
+  shoe: '👟',
+  tap: '🚰',
+  rail: '🚧',
   eraser: '🧽',
 };
 
@@ -21,6 +24,8 @@ export function Toolbar({ level }: { level: Level }) {
   const [orient, swing] = orientationOf(orientIdx);
   const isDoor = tool !== 'eraser' && TOOL_INFO[tool].door;
   const isSign = tool !== 'eraser' && !!TOOL_INFO[tool].sign;
+  const isStation = tool !== 'eraser' && !!TOOL_INFO[tool].station;
+  const arrow = orient === 'v' ? (swing === 1 ? '→' : '←') : swing === 1 ? '↓' : '↑';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,10 +59,12 @@ export function Toolbar({ level }: { level: Level }) {
           </button>
         ))}
         <div className="tool-side">
-          <button className="btn ghost small" onClick={rotate} disabled={!isDoor && !isSign} title="Shortcut: R">
+          <button className="btn ghost small" onClick={rotate} disabled={!isDoor && !isSign && !isStation} title="Shortcut: R">
             {isSign
               ? `⟳ Flip arrow (${swing === 1 ? 'right/down' : 'left/up'})`
-              : `⟳ ${orient === 'v' ? 'Vertical' : 'Horizontal'} · swings ${orient === 'v' ? (swing === 1 ? '→' : '←') : swing === 1 ? '↓' : '↑'}`}
+              : isStation
+                ? `⟳ Faces ${arrow}`
+                : `⟳ ${orient === 'v' ? 'Vertical' : 'Horizontal'} · swings ${arrow}`}
           </button>
           <button className="btn ghost small" onClick={clearDesign} disabled={!design.items.length}>
             Clear all

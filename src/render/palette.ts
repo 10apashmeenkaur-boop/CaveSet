@@ -25,7 +25,21 @@ export const COLORS = {
     kitchen: '#f6c99b',
     washing: '#a9d6e5',
     dining: '#c7e3b0',
+    entrance: '#ffe3a3',
+    exit: '#f7c4b8',
+    shoes: '#e8cfa9',
+    wash: '#a9d6e5',
+    basket: '#f2d3e3',
+    hall: '#c7e3b0',
   } as Record<string, string>,
+  shoeRack: '#b98b5e',
+  slot: '#6b4a32',
+  basket: '#d9b26f',
+  /** Head covers (patkas / chunnis) in the basket. */
+  cloth: ['#f2a65a', '#6c9bd2', '#e9b8c4', '#f3dd8a'],
+  standMat: '#e8d9b5',
+  rail: '#8a8f99',
+  busiest: '#e5394b',
 };
 
 /** Shirt colour tells you what someone is doing. */
@@ -34,6 +48,8 @@ export const SHIRT: Record<AgentType, string> = {
   tray: '#6cc4b8',
   empty: '#b7a6e0',
   elderly: '#9fb4c7',
+  /** Visitors wear their own clothes: the renderer picks one of the muted diner colours per person. */
+  sangat: '#e9b8c4',
 };
 
 export const SKIN = ['#f5d0b5', '#e0ac85', '#c68a62', '#8d5a3b'];

@@ -2,7 +2,11 @@ export type Tile = [number, number];
 
 export type Zone = { x: number; y: number; w: number; h: number };
 
-export type AgentType = 'empty' | 'crate' | 'tray' | 'elderly';
+/** sangat: a visitor going through the langar line (Level 3). */
+export type AgentType = 'empty' | 'crate' | 'tray' | 'elderly' | 'sangat';
+
+/** A service point people queue at, one person at a time. */
+export type StationKind = 'shoe' | 'tap' | 'basket';
 
 export type SpawnRule = {
   type: AgentType;
@@ -11,9 +15,31 @@ export type SpawnRule = {
   count: number;
   every: number;
   delay?: number;
+  /** Arrive in groups of this many at once (every `every` ticks a new group). Default 1. */
+  group?: number;
 };
 
-export type ToolId = 'wall' | 'door1' | 'door2' | 'slide1' | 'slide2' | 'oneway' | 'eraser';
+/** A station built into the level. Faces (serves people standing on) the tile beside it, like a hinged door's swing. */
+export type FixedStation = { kind: StationKind; x: number; y: number; orient: 'h' | 'v'; swing: 1 | -1 };
+
+/** Langar-line rules (Level 3): who visits which stations, where they sit, who leaves. */
+export type QueueRules = {
+  /** Stations every visitor uses, in order. */
+  visit: StationKind[];
+  /** Zone each station kind may be built in. */
+  stationZones: Partial<Record<StationKind, string>>;
+  /** Where the sangat comes in (a queue standing here has spilled out the door), the hall, and the way out. */
+  entrance: string;
+  hall: string;
+  exit: string;
+  /** Hall rows/columns kept clear for walking; every other hall tile is a seat. */
+  aisleRows: number[];
+  aisleCols: number[];
+  /** The previous pangat: already seated in the front seats, they get up in groups and walk out to the exit. */
+  pangat: { count: number; group: number; every: number; delay: number };
+};
+
+export type ToolId = 'wall' | 'door1' | 'door2' | 'slide1' | 'slide2' | 'oneway' | 'shoe' | 'tap' | 'rail' | 'eraser';
 
 export type Level = {
   id: string;
@@ -34,4 +60,6 @@ export type Level = {
   /** Finishing within this earns the Time star. Defaults to 80% of the limit. */
   targetSec?: number;
   allowedTools: ToolId[];
+  stations?: FixedStation[];
+  queue?: QueueRules;
 };

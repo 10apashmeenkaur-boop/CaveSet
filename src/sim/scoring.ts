@@ -4,7 +4,7 @@ import type { SimState } from './simulate';
 import type { Level } from './types';
 
 /** Incidents that mean the job wasn't done properly, even if everything arrived. */
-const FAILS: IncidentCode[] = ['NO_PATH', 'TOO_NARROW', 'TIME_LIMIT', 'DINING_DISTURBED'];
+const FAILS: IncidentCode[] = ['NO_PATH', 'TOO_NARROW', 'TIME_LIMIT', 'DINING_DISTURBED', 'QUEUE_OVERFLOW', 'CROSS_FLOW', 'UNDERUSED_HALL'];
 /** Incidents people grumble about: shown as complaints, they don't cost the pass. */
 const COMPLAINTS: IncidentCode[] = ['HEAD_ON_JAM', 'SWING_BLOCK'];
 
@@ -45,9 +45,13 @@ export function score(level: Level, sim: SimState, cost: number): Score {
     {
       label: 'Function',
       ok: passed,
-      detail: passed
-        ? `All ${sim.totalTasks} loads delivered, nobody disturbed.`
-        : `${sim.delivered} of ${sim.totalTasks} delivered${failCodes.includes('DINING_DISTURBED') ? ', and people walked through the langar' : ''}.`,
+      detail: level.queue
+        ? passed
+          ? `All ${sim.totalTasks} sangat seated, no spills, no crossing.`
+          : `${sim.delivered} of ${sim.totalTasks} sangat seated.`
+        : passed
+          ? `All ${sim.totalTasks} loads delivered, nobody disturbed.`
+          : `${sim.delivered} of ${sim.totalTasks} delivered${failCodes.includes('DINING_DISTURBED') ? ', and people walked through the langar' : ''}.`,
     },
     {
       label: 'Time',

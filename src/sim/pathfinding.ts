@@ -1,7 +1,7 @@
-import { buildGrid, doorAt, itemTiles, swingTiles, TOOL_INFO, type Design, type Orient } from './design';
+import { buildGrid, doorAt, itemTiles, stationsOf, swingTiles, TOOL_INFO, type Design, type Orient } from './design';
 import { DINING_COST, OCCUPIED_COST, RECENT_CAP, RECENT_WEIGHT } from './constants';
 import { getCell, type Grid } from './grid';
-import type { Level, Tile } from './types';
+import type { Level, StationKind, Tile } from './types';
 
 /** Level + design baked into what movement needs to know. */
 export type World = {
@@ -14,7 +14,27 @@ export type World = {
   doorTiles: Map<string, Tile[]>;
   /** Door tile → the only direction people may pass, when the door has a one-way sign. */
   oneWay: Map<string, Tile>;
+  /** Station units (fixed first, then built), each serving one person at a time on its `serve` tile. */
+  units: { kind: StationKind; tile: Tile; serve: Tile }[];
+  /** Hall seats in the order they fill: from the back, and in each row of seats from the far end inwards. */
+  seats: Tile[];
 };
+
+/** Hall tiles that aren't aisles and weren't built over, back first. */
+function seatsOf(level: Level, grid: Grid): Tile[] {
+  const q = level.queue;
+  if (!q) return [];
+  const z = level.zones[q.hall];
+  const fromAisle = (y: number) => Math.min(...q.aisleRows.map((r) => Math.abs(r - y)));
+  const seats: Tile[] = [];
+  for (let x = z.x; x < z.x + z.w; x++) {
+    for (let y = z.y; y < z.y + z.h; y++) {
+      if (!q.aisleRows.includes(y) && !q.aisleCols.includes(x) && getCell(grid, x, y) === 'floor') seats.push([x, y]);
+    }
+  }
+  // Back = far from the hall's door wall (highest x). Far end of each column first so nobody climbs over a diner.
+  return seats.sort((a, b) => b[0] - a[0] || fromAisle(b[1]) - fromAisle(a[1]) || a[1] - b[1]);
+}
 
 
 export const key = (x: number, y: number) => `${x},${y}`;
@@ -41,7 +61,8 @@ export function makeWorld(level: Level, design: Design): World {
       if (sweeps[i]) swing.set(key(x, y), sweeps[i]);
     });
   }
-  return { grid: buildGrid(level, design), doors, swing, doorTiles, oneWay };
+  const grid = buildGrid(level, design);
+  return { grid, doors, swing, doorTiles, oneWay, units: stationsOf(level, design), seats: seatsOf(level, grid) };
 }
 
 export function walkable(world: World, x: number, y: number): boolean {
@@ -95,6 +116,8 @@ export type Crowd = {
   occupied: Set<string>;
   /** Recent waiting per tile (row-major, decays over time). */
   recent: number[];
+  /** Tiles nobody can get through right now (people sitting down to eat). */
+  blocked?: Set<string>;
 };
 
 
@@ -138,6 +161,7 @@ export function findPath(world: World, from: Tile, to: Tile, width: 1 | 2, crowd
       if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
       const n = id(nx, ny);
       if (closed[n] || !canStep(world, [cx, cy], [nx, ny], width)) continue;
+      if (n !== goal && crowd?.blocked?.has(key(nx, ny))) continue;
       let cost = g[i] + (isDining(world, nx, ny) ? DINING_COST : 1);
       if (crowd) {
         if (crowd.occupied.has(key(nx, ny))) cost += OCCUPIED_COST;

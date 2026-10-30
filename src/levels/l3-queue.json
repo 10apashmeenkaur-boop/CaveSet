@@ -1,0 +1,79 @@
+{
+  "id": "l3-queue",
+  "title": "Langar Queue",
+  "brief": "50 sangat arrive in waves: shoes off, wash hands, cover heads, then sit. Keep the line moving and get everyone seated. Budget ₹12,000. Finish in 3 min.",
+  "grid": {
+    "w": 21,
+    "h": 12
+  },
+  "fixedWalls": [
+    [0,0], [0,11], [1,0], [1,11], [2,0], [2,11], [3,0], [3,11], [4,0], [4,11], [5,0], [5,11], [6,0], [6,11], [7,0], [7,11], [8,0], [8,11], [9,0], [9,11], [10,0], [10,11], [11,0], [11,11], [12,0], [12,11], [13,0], [13,11], [14,0], [14,11], [15,0], [15,11], [16,0], [16,11], [17,0], [17,11], [18,0], [18,11], [19,0], [19,11], [20,0], [20,11], [20,1], [20,2], [20,3], [20,4], [20,5], [20,6], [20,7], [20,8], [20,9], [20,10], [0,6], [11,3], [11,4], [11,5], [11,6], [11,7], [11,8], [11,9], [11,10]
+  ],
+  "editableTiles": "all",
+  "zones": {
+    "entrance": {
+      "x": 0,
+      "y": 1,
+      "w": 1,
+      "h": 5
+    },
+    "exit": {
+      "x": 0,
+      "y": 7,
+      "w": 1,
+      "h": 4
+    },
+    "shoes": {
+      "x": 2,
+      "y": 1,
+      "w": 3,
+      "h": 5
+    },
+    "wash": {
+      "x": 5,
+      "y": 1,
+      "w": 4,
+      "h": 5
+    },
+    "basket": {
+      "x": 9,
+      "y": 1,
+      "w": 2,
+      "h": 4
+    },
+    "hall": {
+      "x": 12,
+      "y": 1,
+      "w": 8,
+      "h": 10
+    }
+  },
+  "noWalk": [],
+  "stations": [{"kind": "shoe", "x": 3, "y": 1, "orient": "h", "swing": 1}, {"kind": "tap", "x": 6, "y": 1, "orient": "h", "swing": 1}, {"kind": "basket", "x": 9, "y": 1, "orient": "h", "swing": 1}, {"kind": "basket", "x": 10, "y": 4, "orient": "h", "swing": -1}],
+  "queue": {
+    "visit": ["shoe", "tap", "basket"],
+    "stationZones": {
+      "shoe": "shoes",
+      "tap": "wash",
+      "basket": "basket"
+    },
+    "entrance": "entrance",
+    "hall": "hall",
+    "exit": "exit",
+    "aisleRows": [1, 10],
+    "aisleCols": [12],
+    "pangat": {
+      "count": 16,
+      "group": 4,
+      "every": 200,
+      "delay": 100
+    }
+  },
+  "spawns": [{"type": "sangat", "from": "entrance", "to": "hall", "count": 50, "group": 10, "every": 200}],
+  "budget": 12000,
+  "timeLimitSec": 180,
+  "targetSec": 150,
+  "starCost": 9500,
+  "seed": 1,
+  "allowedTools": ["shoe", "tap", "rail", "wall", "door1", "slide1", "door2", "oneway"]
+}

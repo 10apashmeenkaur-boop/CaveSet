@@ -1,6 +1,7 @@
 import type { Level, Tile } from './types';
 
-export type Cell = 'floor' | 'wall' | 'noWalk' | 'door';
+/** station: a counter, tap or basket. rail: a queue rail. Neither can be walked through. */
+export type Cell = 'floor' | 'wall' | 'noWalk' | 'door' | 'station' | 'rail';
 
 export type Grid = {
   w: number;
@@ -30,6 +31,7 @@ export function gridFromLevel(level: Level): Grid {
   };
   mark(level.noWalk, 'noWalk');
   mark(level.fixedWalls, 'wall');
+  mark((level.stations ?? []).map((st) => [st.x, st.y] as Tile), 'station');
   return grid;
 }
 

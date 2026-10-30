@@ -1,6 +1,8 @@
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
-import type { MeshBasicMaterial } from 'three';
+import type { Group, MeshBasicMaterial } from 'three';
+import { BUSY_MARKER_MIN } from '../sim/constants';
+import { COLORS } from './palette';
 import type { Level } from '../sim/types';
 import { useStore } from '../store';
 import { tileToWorld } from './coords';
@@ -60,6 +62,36 @@ export function HeatLayer({ level }: { level: Level }) {
         const color = `hsl(${50 - 50 * t}, 95%, 55%)`;
         return <FloorTile key={i} level={level} x={i % level.grid.w} y={Math.floor(i / level.grid.w)} color={color} opacity={0.3 + 0.5 * t} />;
       })}
+    </group>
+  );
+}
+
+/** Small bobbing marker over the station unit with the longest line right now. Langar-line levels only. */
+export function BusiestMarker({ level }: { level: Level }) {
+  const at = useStore((s) => {
+    if (!s.sim || !s.world || s.sim.finished || s.sim.timeUp) return '';
+    const loads = s.sim.loads;
+    let best = -1;
+    loads.forEach((n, i) => {
+      if (n >= BUSY_MARKER_MIN && (best < 0 || n > loads[best])) best = i;
+    });
+    return best < 0 ? '' : s.world.units[best].tile.join(',');
+  });
+  const g = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (g.current) g.current.position.y = 1.55 + Math.sin(clock.elapsedTime * 4) * 0.08;
+  });
+  if (!at) return null;
+  const [x, y] = at.split(',').map(Number);
+  const [wx, , wz] = tileToWorld(level, x, y);
+  return (
+    <group position={[wx, 0, wz]}>
+      <group ref={g}>
+        <mesh rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.16, 0.32, 12]} />
+          <meshBasicMaterial color={COLORS.busiest} />
+        </mesh>
+      </group>
     </group>
   );
 }

@@ -9,6 +9,7 @@ import type { Level, Tile } from '../sim/types';
 import { useStore } from '../store';
 import { quoteFor } from '../ui/quotes';
 import { tileToWorld } from './coords';
+import { COLORS } from './palette';
 import { Person } from './Person';
 
 const TICK_SEC = 1 / TICKS_PER_SEC;
@@ -61,13 +62,22 @@ function AgentView({ level, index }: { level: Level; index: number }) {
 
   if (!look || state === 'done') return null;
   const n = Number(id.slice(1));
+  const seated = state === 'seated';
   // When time runs out everyone is late; only some of them say so, or the bubbles pile up.
-  const speaks = complaint && (complaint !== 'TIME_LIMIT' || n % 4 === 1);
+  const speaks = complaint && ((complaint !== 'TIME_LIMIT' && complaint !== 'UNDERUSED_HALL') || n % 4 === 1);
   const line = speaks ? quoteFor(complaint as IncidentCode, id) : null;
 
   return (
     <group ref={group}>
-      <Person type={type} position={[0, 0, 0]} skin={n} phase={n * 1.7} walking={state === 'walking'} />
+      <Person
+        type={type}
+        position={[0, 0, 0]}
+        skin={n}
+        phase={n * 1.7}
+        walking={state === 'walking'}
+        seated={seated}
+        shirt={type === 'sangat' ? COLORS.diners[n % COLORS.diners.length] : undefined}
+      />
       {line ? <Bubble text={line} height={1.2} /> : state === 'stuck' ? <Bubble text="?!" height={1.2} small /> : null}
     </group>
   );

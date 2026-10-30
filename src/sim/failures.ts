@@ -1,6 +1,6 @@
-import type { Agent } from './agents';
-import { CONGESTION_TICKS, HEAD_ON_TICKS, SWING_TICKS } from './constants';
-import type { Tile } from './types';
+import { goingIn, type Agent } from './agents';
+import { CONGESTION_TICKS, CROSS_FLOW_TICKS, HEAD_ON_TICKS, QUEUE_SPILL_TICKS, SWING_TICKS, UNDERUSED_SHARE } from './constants';
+import type { StationKind, Tile, Zone } from './types';
 
 export type IncidentCode =
   | 'NO_PATH'
@@ -10,7 +10,10 @@ export type IncidentCode =
   | 'DINING_DISTURBED'
   | 'CONGESTION'
   | 'TIME_LIMIT'
-  | 'OVER_BUDGET';
+  | 'OVER_BUDGET'
+  | 'QUEUE_OVERFLOW'
+  | 'CROSS_FLOW'
+  | 'UNDERUSED_HALL';
 
 /** The "why it went wrong" card. */
 export type Incident = {
@@ -69,6 +72,21 @@ export const PRINCIPLES: Record<IncidentCode, { title: string; principle: string
     principle: 'Put money into the parts that carry the load.',
     hint: 'Remove something, or swap a pricey part for a cheaper one that still fits.',
   },
+  QUEUE_OVERFLOW: {
+    title: 'Fix the slowest station first',
+    principle: 'A line grows at the slowest step. If people arrive faster than it can serve, the line spills out the door.',
+    hint: 'Find the busiest station (the marker shows it) and add another unit there.',
+  },
+  CROSS_FLOW: {
+    title: 'Separate in and out',
+    principle: 'People arriving and people leaving should not share one path.',
+    hint: 'Give the hall a second door with a one-way sign, so leavers have their own way out.',
+  },
+  UNDERUSED_HALL: {
+    title: 'The bottleneck sets the speed',
+    principle: 'The slowest step limits the whole line. Speeding up any other step changes nothing.',
+    hint: 'Watch the busiest-station marker. More taps won’t help if the shoe stand is the slow one.',
+  },
 };
 
 
@@ -76,17 +94,32 @@ const where = ([x, y]: Tile) => `(${x},${y})`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const near = (a: Tile, b: Tile) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) <= 2;
 
+const inZone = ([x, y]: Tile, z: Zone) => x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h;
+
+/** One going in, the other going out. */
+function crossing(a: Agent, b: Agent | undefined): boolean {
+  return !!b && ((goingIn(a) && !!b.leaving) || (!!a.leaving && goingIn(b)));
+}
+
+/** Waiting at the door because the line hasn't moved. */
+function spilled(a: Agent, entrance: Zone | undefined): boolean {
+  return !!entrance && goingIn(a) && a.state === 'waiting' && a.waitReason !== 'service' && inZone(a.pos, entrance);
+}
+
 /** What an agent is complaining about right now, if anything. Drives speech bubbles. */
-export function complaintOf(a: Agent, others: Map<string, Agent>, timeUp: boolean): IncidentCode | undefined {
-  if (a.state === 'done') return undefined;
+export function complaintOf(a: Agent, others: Map<string, Agent>, timeUp: boolean, entrance?: Zone): IncidentCode | undefined {
+  if (a.state === 'done' || a.state === 'seated') return undefined;
   if (a.stuckReason === 'no-path') return 'NO_PATH';
   if (a.stuckReason === 'too-narrow') return 'TOO_NARROW';
   if (a.waitReason === 'swing' && a.waitTicks >= SWING_TICKS) return 'SWING_BLOCK';
+  const b = a.blocker ? others.get(a.blocker) : undefined;
+  if (a.waitReason === 'occupied' && a.waitTicks >= CROSS_FLOW_TICKS && crossing(a, b)) return 'CROSS_FLOW';
   if (a.waitReason === 'occupied' && a.waitTicks >= HEAD_ON_TICKS) {
-    const b = a.blocker ? others.get(a.blocker) : undefined;
     if (b?.blocker === a.id && b.waitTicks >= HEAD_ON_TICKS) return 'HEAD_ON_JAM';
   }
-  if (timeUp) return 'TIME_LIMIT';
+  if (spilled(a, entrance) && a.waitTicks >= QUEUE_SPILL_TICKS) return 'QUEUE_OVERFLOW';
+  // Out of time, the sangat still in line grumble about the food, not about routes.
+  if (timeUp) return goingIn(a) ? 'UNDERUSED_HALL' : 'TIME_LIMIT';
   return undefined;
 }
 
@@ -121,7 +154,17 @@ export type DetectInput = {
   timeLimitSec: number;
   heat: number[];
   gridW: number;
+  /** Langar line levels: the entrance zone, number of hall seats, and the longest line each station kind had. */
+  queue?: { entrance: Zone; seats: number; peak: Partial<Record<StationKind, number>> };
 };
+
+const STATION_LABEL: Record<StationKind, string> = { shoe: 'shoe stand', tap: 'hand-wash tap', basket: 'head-cover basket' };
+
+/** The station kind that had the longest line, e.g. "the shoe stand (9 people in line)". */
+function busiest(peak: Partial<Record<StationKind, number>>): string {
+  const [kind, n] = (Object.entries(peak) as [StationKind, number][]).reduce((a, b) => (b[1] > a[1] ? b : a), ['shoe', 0]);
+  return `the ${STATION_LABEL[kind]} (${plural(n, 'person', 'people')} in line at once)`;
+}
 
 /** Run every detector for this tick. Returns the updated incident list (new array; incidents copied before change). */
 export function detect(prev: Incident[], d: DetectInput): Incident[] {
@@ -153,9 +196,24 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
       inc.evidence = `The door at ${where(inc.tiles[0])} was blocked ${plural(inc.count, 'time')}: someone stood in its swing for 2+ seconds.`;
     }
 
+    // In meets out: once per wait. (Counted here instead of as a head-on jam.)
+    const b = a.blocker ? byId.get(a.blocker) : undefined;
+    if (a.waitReason === 'occupied' && a.waitTicks === CROSS_FLOW_TICKS && crossing(a, b)) {
+      const inc = record(list, 'CROSS_FLOW', d.tick, [a.pos, b!.pos], [a.id, b!.id], 'global');
+      inc.count++;
+      inc.title = 'People going in ran into people leaving';
+      inc.evidence = `The sangat coming in and the pangat walking out blocked each other ${plural(inc.count, 'time')} (first near ${where(inc.tiles[0])}).`;
+    }
+
+    if (d.queue && spilled(a, d.queue.entrance) && a.waitTicks === QUEUE_SPILL_TICKS) {
+      const inc = record(list, 'QUEUE_OVERFLOW', d.tick, [a.pos], [a.id], 'global');
+      inc.count = inc.agents.length;
+      inc.title = 'The line spilled out the door';
+      inc.evidence = `${plural(inc.count, 'person', 'people')} stood stuck in the entrance for ${QUEUE_SPILL_TICKS / 10}+ seconds. Longest line: ${busiest(d.queue.peak)}.`;
+    }
+
     // Fire once per stand-off, from the lower id's side.
-    if (a.waitReason === 'occupied' && a.waitTicks === HEAD_ON_TICKS) {
-      const b = a.blocker ? byId.get(a.blocker) : undefined;
+    if (a.waitReason === 'occupied' && a.waitTicks === HEAD_ON_TICKS && !crossing(a, b)) {
       if (b && b.blocker === a.id && b.waitTicks >= HEAD_ON_TICKS) {
         const inc = record(list, 'HEAD_ON_JAM', d.tick, [a.pos, b.pos], [a.id, b.id], 'global');
         inc.count++;
@@ -178,10 +236,21 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
     const inc = record(list, 'TIME_LIMIT', d.tick, late.map((a) => a.pos), late.map((a) => a.id), 'global');
     inc.count = 1;
     inc.title = 'Ran out of time';
-    inc.evidence = `Only ${d.delivered} of ${d.totalTasks} loads were delivered in ${d.timeLimitSec}s.`;
+    inc.evidence = d.queue
+      ? `Only ${d.delivered} of ${d.totalTasks} sangat got to sit down in ${d.timeLimitSec}s.`
+      : `Only ${d.delivered} of ${d.totalTasks} loads were delivered in ${d.timeLimitSec}s.`;
   }
 
-  if (d.ended && !list.some((i) => i.code === 'CONGESTION')) {
+  if (d.queue && d.timeUp && d.delivered < d.queue.seats * UNDERUSED_SHARE && !list.some((i) => i.code === 'UNDERUSED_HALL')) {
+    const waiting = d.agents.filter((a) => a.station !== undefined && a.state !== 'done' && a.state !== 'seated');
+    const inc = record(list, 'UNDERUSED_HALL', d.tick, waiting.map((a) => a.pos), waiting.map((a) => a.id), 'global');
+    inc.count = 1;
+    inc.title = 'Half the hall sat empty';
+    inc.evidence = `Only ${d.delivered} of ${d.queue.seats} seats were filled. The longest line was at ${busiest(d.queue.peak)}.`;
+  }
+
+  // Langar lines are meant to queue; their crowding shows up as QUEUE_OVERFLOW / UNDERUSED_HALL instead.
+  if (d.ended && !d.queue && !list.some((i) => i.code === 'CONGESTION')) {
     const hot: Tile[] = [];
     let worst = 0;
     d.heat.forEach((v, i) => {

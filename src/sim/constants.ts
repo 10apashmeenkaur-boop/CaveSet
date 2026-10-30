@@ -51,6 +51,16 @@ export const STAIR_MIN_TREAD_M = 0.3;
 /** Comfortable standing-work counter height ~85–90 cm. */
 export const COUNTER_HEIGHT_M = 0.88;
 
+/** Langar line service times (seconds per person, one person per unit at a time). Game estimates from watching seva. */
+export const SERVICE_SEC = {
+  /** Take shoes off, hand them over, get a token: ~4 s. */
+  shoe: 4,
+  /** Wash hands properly at one tap: ~6 s. */
+  tap: 6,
+  /** Pick a head cover from the basket and tie it: ~2 s. */
+  basket: 2,
+} as const;
+
 // ─── 2. Game tuning ─────────────────────────────────────────────────────────────────────
 
 /** Fixed simulation timestep. */
@@ -63,6 +73,8 @@ export const REPATH_TICKS = 15;
  * if a crate is involved one carrier backs out of the way instead.
  */
 export const SQUEEZE_TICKS = 35;
+/** Two visitors going the same way in a langar line shuffle past each other much sooner. */
+export const LINE_SQUEEZE_TICKS = 10;
 /** Waiting this long: step aside to let the other person through (and every SIDESTEP_EVERY after). */
 export const SIDESTEP_TICKS = 40;
 export const SIDESTEP_EVERY = 20;
@@ -93,3 +105,14 @@ export const HEAD_ON_TICKS = 30;
 export const SWING_TICKS = 20;
 /** A tile where people waited this many ticks in total counts as congested. */
 export const CONGESTION_TICKS = 150;
+
+/** Someone waiting this long inside the entrance means the queue has spilled out the door. */
+export const QUEUE_SPILL_TICKS = 80;
+/** Someone going in blocked by someone going out (or the reverse) this long: a cross-flow incident. */
+export const CROSS_FLOW_TICKS = 20;
+/** The hall counts as underused if fewer than this share of its seats are filled when time runs out. */
+export const UNDERUSED_SHARE = 0.5;
+/** With no free seat, wait this long at the last station before looking again. */
+export const SEAT_RETRY_TICKS = 10;
+/** The busiest-station marker only shows once this many people are heading for or waiting at one unit. */
+export const BUSY_MARKER_MIN = 3;

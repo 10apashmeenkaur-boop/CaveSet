@@ -1,13 +1,14 @@
 import type { ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { buildGrid, doorAt, itemAt, itemTiles, TOOL_INFO } from '../sim/design';
+import { buildGrid, doorAt, itemAt, itemTiles, serveTile, stationsOf, TOOL_INFO } from '../sim/design';
 import { getCell } from '../sim/grid';
+import { EMPTY_DESIGN } from '../sim/design';
 import type { Level } from '../sim/types';
 import { resolveDraft, useStore } from '../store';
 import { sfx } from '../audio/sfx';
 import { tileToWorld } from './coords';
 import { DropIn } from './Feel';
-import { DoorItem, SignItem, WallBlock } from './Items';
+import { DoorItem, RailItem, SignItem, StationItem, WallBlock } from './Items';
 import { COLORS } from './palette';
 
 /** Every wall tile (fixed + placed) and every placed door. */
@@ -17,9 +18,32 @@ export function DesignLayer({ level }: { level: Level }) {
 
   const walls: [number, number][] = [];
   for (let y = 0; y < grid.h; y++) for (let x = 0; x < grid.w; x++) if (getCell(grid, x, y) === 'wall') walls.push([x, y]);
+  const fixedStations = stationsOf(level, EMPTY_DESIGN);
+  const rails = design.items.filter((it) => it.tool === 'rail');
+  const railAt = (x: number, y: number) => getCell(grid, x, y) === 'rail';
 
   return (
     <group>
+      {fixedStations.map((st) => (
+        <StationItem key={`fixed-${st.tile.join(',')}`} level={level} kind={st.kind} tile={st.tile} serve={st.serve} />
+      ))}
+      {design.items
+        .filter((it) => TOOL_INFO[it.tool].station)
+        .map((it) => (
+          <DropIn key={it.id}>
+            <StationItem level={level} kind={TOOL_INFO[it.tool].station!} tile={[it.x, it.y]} serve={serveTile(it)} />
+          </DropIn>
+        ))}
+      {rails.map((it) => (
+        <DropIn key={it.id}>
+          <RailItem
+            level={level}
+            x={it.x}
+            y={it.y}
+            links={([[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]).filter(([dx, dy]) => railAt(it.x + dx, it.y + dy))}
+          />
+        </DropIn>
+      ))}
       {walls.map(([x, y]) => (
         <DropIn key={`${x},${y}`}>
           <WallBlock position={tileToWorld(level, x, y)} />
@@ -82,7 +106,15 @@ export function GhostLayer({ level }: { level: Level }) {
       {itemTiles(draft).map(([tx, ty]) => (
         <TileOutline key={`${tx},${ty}`} level={level} x={tx} y={ty} color={COLORS.hover} />
       ))}
-      {tool === 'wall' ? <WallBlock position={tileToWorld(level, x, y)} ghost={ghost} /> : <DoorItem level={level} item={draft} ghost={ghost} />}
+      {tool === 'wall' ? (
+        <WallBlock position={tileToWorld(level, x, y)} ghost={ghost} />
+      ) : tool === 'rail' ? (
+        <RailItem level={level} x={x} y={y} links={[]} ghost={ghost} />
+      ) : TOOL_INFO[tool].station ? (
+        <StationItem level={level} kind={TOOL_INFO[tool].station!} tile={[draft.x, draft.y]} serve={serveTile(draft)} ghost={ghost} />
+      ) : (
+        <DoorItem level={level} item={draft} ghost={ghost} />
+      )}
     </group>
   );
 }
@@ -131,8 +163,8 @@ export function InteractionPlane({ level }: { level: Level }) {
         const prev = s.hover;
         if (t?.[0] === prev?.[0] && t?.[1] === prev?.[1]) return;
         s.setHover(t);
-        // Drag-paint walls and erasing; doors are one per click.
-        if (t && painting.current && (s.tool === 'wall' || s.tool === 'eraser')) act(painting.current, ...t);
+        // Drag-paint walls, rails and erasing; doors and stations are one per click.
+        if (t && painting.current && (s.tool === 'wall' || s.tool === 'rail' || s.tool === 'eraser')) act(painting.current, ...t);
       }}
       onPointerLeave={() => useStore.getState().setHover(null)}
       onPointerDown={(e) => {

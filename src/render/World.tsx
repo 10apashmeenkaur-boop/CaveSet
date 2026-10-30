@@ -5,7 +5,17 @@ import { tileToWorld } from './coords';
 import { COLORS } from './palette';
 import { Person } from './Person';
 
-const ZONE_NAMES: Record<string, string> = { kitchen: 'Kitchen', washing: 'Washing', dining: 'Dining hall' };
+const ZONE_NAMES: Record<string, string> = {
+  kitchen: 'Kitchen',
+  washing: 'Washing',
+  dining: 'Dining hall',
+  entrance: 'Entrance',
+  exit: 'Exit',
+  shoes: 'Shoes',
+  wash: 'Hand wash',
+  basket: 'Head covers',
+  hall: 'Dining hall',
+};
 
 function zoneCenter(level: Level, z: Zone): [number, number, number] {
   return tileToWorld(level, z.x + z.w / 2 - 0.5, z.y + z.h / 2 - 0.5);
@@ -165,6 +175,36 @@ function DiningHall({ level, z }: { level: Level; z: Zone }) {
   );
 }
 
+/** Langar-line hall: a long mat down every column of seats (the sangat sits on them during the run). */
+function HallMats({ level }: { level: Level }) {
+  const q = level.queue!;
+  const z = level.zones[q.hall];
+  const rows = Array.from({ length: z.h }, (_, i) => z.y + i).filter((y) => !q.aisleRows.includes(y));
+  const cols = Array.from({ length: z.w }, (_, i) => z.x + i).filter((x) => !q.aisleCols.includes(x));
+  // Contiguous runs of seat rows, e.g. [2..9].
+  const runs: [number, number][] = [];
+  for (const y of rows) {
+    const last = runs[runs.length - 1];
+    if (last && last[1] === y - 1) last[1] = y;
+    else runs.push([y, y]);
+  }
+  return (
+    <group>
+      {cols.flatMap((x) =>
+        runs.map(([a, b]) => {
+          const [wx, , wz] = tileToWorld(level, x, (a + b) / 2);
+          return (
+            <mesh key={`${x}-${a}`} position={[wx, 0.015, wz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <planeGeometry args={[0.8, b - a + 0.9]} />
+              <meshStandardMaterial color={COLORS.mat} />
+            </mesh>
+          );
+        }),
+      )}
+    </group>
+  );
+}
+
 export function Props({ level }: { level: Level }) {
   const { kitchen, washing, dining } = level.zones;
   return (
@@ -172,6 +212,7 @@ export function Props({ level }: { level: Level }) {
       {kitchen && <KitchenProps level={level} z={kitchen} />}
       {washing && <WashingProps level={level} z={washing} />}
       {dining && <DiningHall level={level} z={dining} />}
+      {level.queue && <HallMats level={level} />}
     </group>
   );
 }

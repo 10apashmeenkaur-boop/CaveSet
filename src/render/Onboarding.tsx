@@ -20,7 +20,14 @@ export function EditableGlow({ level }: { level: Level }) {
 
   const tiles = useMemo(() => {
     const grid = buildGrid(level, design);
-    return level.fixedWalls.filter(([x, y]) => isEditable(level, x, y) && getCell(grid, x, y) === 'wall');
+    const open = (x: number, y: number) => {
+      const c = getCell(grid, x, y);
+      return c !== null && c !== 'wall';
+    };
+    // A wall on the site's edge only counts if there's floor on both sides of it along the edge.
+    const onEdge = (x: number, y: number) => x === 0 || y === 0 || x === grid.w - 1 || y === grid.h - 1;
+    const doorable = (x: number, y: number) => !onEdge(x, y) || (open(x - 1, y) && open(x + 1, y)) || (open(x, y - 1) && open(x, y + 1));
+    return level.fixedWalls.filter(([x, y]) => isEditable(level, x, y) && getCell(grid, x, y) === 'wall' && doorable(x, y));
   }, [level, design]);
 
   return (

@@ -9,7 +9,7 @@ import { Floor, Props, ZoneLabels } from './World';
 import { AgentsLayer, DinerBubbles, SimRunner } from './Agents';
 import { AudioDirector, CameraDirector, Lighting } from './Feel';
 import { EditableGlow } from './Onboarding';
-import { HeatLayer, IncidentTiles } from './Overlays';
+import { BusiestMarker, HeatLayer, IncidentTiles } from './Overlays';
 
 // Isometric-ish view: ~45° yaw, ~35° pitch.
 const YAW = Math.PI / 4;
@@ -47,6 +47,7 @@ export function Scene({ level }: { level: Level }) {
       <HeatLayer level={level} />
       <IncidentTiles level={level} />
       <AgentsLayer level={level} />
+      {level.queue && <BusiestMarker level={level} />}
       <DinerBubbles level={level} />
       <SimRunner />
     </Canvas>

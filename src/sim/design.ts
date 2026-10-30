@@ -1,6 +1,6 @@
 import { DOUBLE_DOOR_TILES, PERSON_TILES, SINGLE_DOOR_TILES } from './constants';
-import { getCell, gridFromLevel, idx, inBounds, type Grid } from './grid';
-import type { Level, Tile, ToolId } from './types';
+import { getCell, gridFromLevel, idx, inBounds, zoneAt, type Grid } from './grid';
+import type { Level, StationKind, Tile, ToolId } from './types';
 
 export type BuildTool = Exclude<ToolId, 'eraser'>;
 /** Axis a door's width runs along: 'v' = along y (sits in a vertical wall, people pass in x). */
@@ -14,14 +14,36 @@ export type Draft = Omit<Placed, 'id'>;
 
 export const EMPTY_DESIGN: Design = { items: [], nextId: 1 };
 
-export const TOOL_INFO: Record<BuildTool, { name: string; cost: number; width: 1 | 2; door: boolean; hinged: boolean; sign?: boolean }> = {
+export const TOOL_INFO: Record<
+  BuildTool,
+  { name: string; cost: number; width: 1 | 2; door: boolean; hinged: boolean; sign?: boolean; station?: StationKind }
+> = {
   wall: { name: 'Brick wall', cost: 500, width: PERSON_TILES, door: false, hinged: false },
   door1: { name: 'Hinged door', cost: 2000, width: SINGLE_DOOR_TILES, door: true, hinged: true },
   door2: { name: 'Double door', cost: 3500, width: DOUBLE_DOOR_TILES, door: true, hinged: true },
   slide1: { name: 'Sliding door', cost: 3000, width: SINGLE_DOOR_TILES, door: true, hinged: false },
   slide2: { name: 'Wide sliding door', cost: 5000, width: DOUBLE_DOOR_TILES, door: true, hinged: false },
   oneway: { name: 'One-way sign', cost: 200, width: PERSON_TILES, door: false, hinged: false, sign: true },
+  shoe: { name: 'Shoe stand', cost: 2000, width: PERSON_TILES, door: false, hinged: false, station: 'shoe' },
+  tap: { name: 'Hand-wash tap', cost: 1500, width: PERSON_TILES, door: false, hinged: false, station: 'tap' },
+  rail: { name: 'Queue rail', cost: 300, width: PERSON_TILES, door: false, hinged: false },
 };
+
+const STATION_NAME: Record<StationKind, string> = { shoe: 'Shoe stands', tap: 'Taps', basket: 'Baskets' };
+
+/** Where someone stands to use a station: the tile it faces (same rule as a hinged door's swing). */
+export function serveTile(st: { x: number; y: number; orient: Orient; swing: Side }): Tile {
+  return st.orient === 'v' ? [st.x + st.swing, st.y] : [st.x, st.y + st.swing];
+}
+
+/** Every station in play: the level's fixed ones, then the player's, in that order. */
+export function stationsOf(level: Level, design: Design): { kind: StationKind; tile: Tile; serve: Tile }[] {
+  const fixed = (level.stations ?? []).map((st) => ({ kind: st.kind, tile: [st.x, st.y] as Tile, serve: serveTile(st) }));
+  const built = design.items
+    .filter((it) => TOOL_INFO[it.tool].station)
+    .map((it) => ({ kind: TOOL_INFO[it.tool].station!, tile: [it.x, it.y] as Tile, serve: serveTile(it) }));
+  return [...fixed, ...built];
+}
 
 const isSign = (it: Draft) => !!TOOL_INFO[it.tool].sign;
 
@@ -95,22 +117,41 @@ export function checkPlace(level: Level, design: Design, draft: Draft): PlaceChe
 
   const base = gridFromLevel(level);
   const taken = new Set(design.items.filter((it) => !isSign(it)).flatMap((it) => itemTiles(it).map(([x, y]) => key(x, y))));
+  // Nobody may build where people stand to use a station.
+  const serving = new Set(stationsOf(level, design).map(({ serve: [x, y] }) => key(x, y)));
 
   for (const [x, y] of itemTiles(draft)) {
     if (!inBounds(base, x, y)) return { ok: false, reason: 'That runs off the edge of the site.' };
     if (!isEditable(level, x, y)) return { ok: false, reason: 'You can only build on the marked wall here.' };
     if (taken.has(key(x, y))) return { ok: false, reason: 'Something is already built there.' };
+    if (serving.has(key(x, y))) return { ok: false, reason: 'People stand there to use the station.' };
     const cell = getCell(base, x, y);
     if (cell === 'noWalk') return { ok: false, reason: 'People are eating there. No construction in the dining hall!' };
+    if (cell === 'station') return { ok: false, reason: 'A station is already there.' };
     if (!info.door && cell === 'wall') return { ok: false, reason: 'There is already a wall there.' };
+  }
+
+  if (info.station) {
+    const zone = level.queue?.stationZones[info.station];
+    if (!zone || zoneAt(level, draft.x, draft.y) !== zone) {
+      return { ok: false, reason: `${STATION_NAME[info.station]} go in the ${zone ?? 'right'} area.` };
+    }
+    const [sx, sy] = serveTile(draft);
+    const cell = getCell(base, sx, sy);
+    if (cell !== 'floor' || taken.has(key(sx, sy)) || serving.has(key(sx, sy))) {
+      return { ok: false, reason: 'People need free floor in front of it. Press R to turn it.' };
+    }
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => serving.has(key(sx + dx, sy + dy)))) {
+      return { ok: false, reason: 'Too close to the next station: leave a gap so people can step out.' };
+    }
   }
 
   for (const [x, y] of swingTiles(draft)) {
     const cell = getCell(base, x, y);
     if (cell === null) return { ok: false, reason: 'The door would swing off the edge of the site.' };
-    if (cell === 'wall' || cell === 'noWalk') return { ok: false, reason: 'The door has no room to swing. Press R to flip or rotate it.' };
+    if (cell === 'wall' || cell === 'noWalk' || cell === 'station') return { ok: false, reason: 'The door has no room to swing. Press R to flip or rotate it.' };
     const blocker = itemAt(design, x, y);
-    if (blocker && blocker.tool === 'wall') return { ok: false, reason: 'The door would swing into a wall. Press R to flip it.' };
+    if (blocker && (blocker.tool === 'wall' || blocker.tool === 'rail' || TOOL_INFO[blocker.tool].station)) return { ok: false, reason: 'The door would swing into something. Press R to flip it.' };
   }
   return { ok: true };
 }
@@ -134,7 +175,7 @@ export function buildGrid(level: Level, design: Design): Grid {
   const grid = gridFromLevel(level);
   for (const it of design.items) {
     if (isSign(it)) continue;
-    const cell = it.tool === 'wall' ? 'wall' : 'door';
+    const cell = it.tool === 'wall' ? 'wall' : it.tool === 'rail' ? 'rail' : TOOL_INFO[it.tool].station ? 'station' : 'door';
     for (const [x, y] of itemTiles(it)) grid.cells[idx(grid, x, y)] = cell;
   }
   return grid;

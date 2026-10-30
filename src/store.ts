@@ -172,7 +172,10 @@ export const useStore = create<Store>((set, get) => ({
       }
     }
     // Starting fresh from design mode bakes the design into a world once.
-    if (mode === 'design') set({ notice: null, mode: 'sim', world: makeWorld(level, design), sim: initSim(level), running: true, hover: null });
+    if (mode === 'design') {
+      const world = makeWorld(level, design);
+      set({ notice: null, mode: 'sim', world, sim: initSim(level, level.seed, world), running: true, hover: null });
+    }
     else set({ running: true });
   },
   pause: () => set({ running: false }),
@@ -212,7 +215,7 @@ export type Resolved = {
 };
 
 /**
- * What a click at (x, y) would build. Doors try the chosen orientation first, then the others,
+ * What a click at (x, y) would build. Doors and stations try the chosen orientation first, then the others,
  * so hovering a wall just works instead of flashing red.
  */
 export function resolveDraft(level: Level, design: Design, tool: BuildTool, x: number, y: number, orientIdx: number): Resolved {
@@ -220,7 +223,7 @@ export function resolveDraft(level: Level, design: Design, tool: BuildTool, x: n
   if (TOOL_INFO[tool].sign) return { draft: base, check: checkPlace(level, design, base), relevant: !!doorAt(design, x, y) };
   if (!isEditable(level, x, y)) return { draft: base, check: { ok: false, reason: '' }, relevant: false };
   const first = checkPlace(level, design, base);
-  if (first.ok || !TOOL_INFO[tool].door) return { draft: base, check: first, relevant: true };
+  if (first.ok || !(TOOL_INFO[tool].door || TOOL_INFO[tool].station)) return { draft: base, check: first, relevant: true };
   // Same axis with the other swing first, then the other axis.
   for (const i of [orientIdx ^ 1, (orientIdx + 2) % 4, ((orientIdx + 2) % 4) ^ 1]) {
     const d = draftFor(tool, x, y, i);

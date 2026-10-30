@@ -1,6 +1,9 @@
 import type { IncidentCode } from '../sim/failures';
 
-export type FailureCode = Extract<IncidentCode, 'TOO_NARROW' | 'HEAD_ON_JAM' | 'SWING_BLOCK' | 'NO_PATH' | 'TIME_LIMIT' | 'DINING_DISTURBED'>;
+export type FailureCode = Extract<
+  IncidentCode,
+  'TOO_NARROW' | 'HEAD_ON_JAM' | 'SWING_BLOCK' | 'NO_PATH' | 'TIME_LIMIT' | 'DINING_DISTURBED' | 'QUEUE_OVERFLOW' | 'CROSS_FLOW' | 'UNDERUSED_HALL'
+>;
 
 /** What people say when a design fails them. Short, casual, under 8 words. Used for banners and speech bubbles. */
 export const QUOTES: Record<FailureCode, string[]> = {
@@ -40,6 +43,24 @@ export const QUOTES: Record<FailureCode, string[]> = {
     'Dhyan se, dal gir jayegi!',
     'Crate upar se? Seriously?',
   ],
+  QUEUE_OVERFLOW: [
+    'Andar aane ki jagah hi nahi!',
+    'Line toh bahar tak hai!',
+    'Joote utaarne mein itni der?',
+    'Darwaze pe hi khade hain, ji.',
+  ],
+  CROSS_FLOW: [
+    'Bhaji, bahar jaana hai!',
+    'Andar wale, thoda ruko!',
+    'Aana jaana ek hi raste?',
+    'Side do ji, ghar jaana hai.',
+  ],
+  UNDERUSED_HALL: [
+    'Hall khaali, line lambi!',
+    'Pangat aadhi khaali hai!',
+    'Sab log kahan reh gaye?',
+    'Roti thandi ho rahi hai!',
+  ],
 };
 
 /** Who says it, shown under banner quotes. */
@@ -50,6 +71,9 @@ export const FAILURE_LABEL: Record<FailureCode, string> = {
   NO_PATH: 'a sevadar, lost, no way through',
   TIME_LIMIT: 'a sevadar, running late for langar',
   DINING_DISTURBED: 'a diner, trying to eat in peace',
+  QUEUE_OVERFLOW: 'someone stuck at the entrance',
+  CROSS_FLOW: 'a diner, trying to leave',
+  UNDERUSED_HALL: 'a sevadar, serving an empty pangat',
 };
 
 export type Quote = { text: string; code: FailureCode };
