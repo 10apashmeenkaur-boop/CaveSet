@@ -60,6 +60,7 @@
   ],
   "budget": 16000,
   "timeLimitSec": 120,
+  "targetSec": 85,
   "allowedTools": [
     "wall",
     "door1",

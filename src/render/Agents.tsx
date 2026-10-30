@@ -61,7 +61,9 @@ function AgentView({ level, index }: { level: Level; index: number }) {
 
   if (!look || state === 'done') return null;
   const n = Number(id.slice(1));
-  const line = complaint ? quoteFor(complaint as IncidentCode, id) : null;
+  // When time runs out everyone is late; only some of them say so, or the bubbles pile up.
+  const speaks = complaint && (complaint !== 'TIME_LIMIT' || n % 4 === 1);
+  const line = speaks ? quoteFor(complaint as IncidentCode, id) : null;
 
   return (
     <group ref={group}>

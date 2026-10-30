@@ -17,18 +17,19 @@ function FloorTile({ level, x, y, color, opacity }: { level: Level; x: number; y
 
 /** Pulsing red floor under every incident's tiles. */
 export function IncidentTiles({ level }: { level: Level }) {
+  const focused = useStore((s) => s.focus !== null);
   const tiles = useStore((s) => {
     const set = new Set<string>();
-    for (const i of s.sim?.incidents ?? []) {
-      if (i.code === 'TIME_LIMIT' || i.code === 'CONGESTION') continue;
-      for (const t of i.tiles) set.add(t.join(','));
-    }
+    const all = s.sim?.incidents ?? [];
+    // With a card selected, show only that incident (whatever its kind).
+    const shown = s.focus !== null ? all.slice(s.focus, s.focus + 1) : all.filter((i) => i.code !== 'TIME_LIMIT' && i.code !== 'CONGESTION');
+    for (const i of shown) for (const t of i.tiles) set.add(t.join(','));
     return [...set].sort().join(';');
   });
   const group = useRef<{ children: { material?: MeshBasicMaterial }[] }>(null);
 
   useFrame(({ clock }) => {
-    const o = 0.35 + 0.2 * Math.sin(clock.elapsedTime * 4);
+    const o = (focused ? 0.55 : 0.35) + 0.2 * Math.sin(clock.elapsedTime * (focused ? 7 : 4));
     group.current?.children.forEach((m) => m.material && (m.material.opacity = o));
   });
 
@@ -37,7 +38,7 @@ export function IncidentTiles({ level }: { level: Level }) {
     <group ref={group as never}>
       {tiles.split(';').map((k) => {
         const [x, y] = k.split(',').map(Number);
-        return <FloorTile key={k} level={level} x={x} y={y} color="#e5394b" opacity={0.45} />;
+        return <FloorTile key={k} level={level} x={x} y={y} color={focused ? '#ff2d55' : '#e5394b'} opacity={0.45} />;
       })}
     </group>
   );

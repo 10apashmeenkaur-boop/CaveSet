@@ -27,5 +27,7 @@ export type Level = {
   spawns: SpawnRule[];
   budget: number;
   timeLimitSec: number;
+  /** Finishing within this earns the Time star. Defaults to 80% of the limit. */
+  targetSec?: number;
   allowedTools: ToolId[];
 };

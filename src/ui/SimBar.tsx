@@ -28,7 +28,6 @@ export function SimBar({ level }: { level: Level }) {
   const elapsed = sim.tick / TICKS_PER_SEC;
   const stuck = sim.agents.filter((a) => a.state === 'stuck').length;
   const ended = sim.finished || sim.timeUp;
-  const failed = sim.incidents.some((i) => ['NO_PATH', 'TOO_NARROW', 'TIME_LIMIT', 'DINING_DISTURBED'].includes(i.code));
 
   return (
     <div className="simbar blueprint">
@@ -54,9 +53,10 @@ export function SimBar({ level }: { level: Level }) {
           {level.timeLimitSec > 0 && <span className="muted"> / {fmt(level.timeLimitSec)}</span>}
         </span>
         <span>📦 {sim.delivered}/{sim.totalTasks} delivered</span>
+        {ended && <span className={sim.finished ? 'good' : 'bad'}>{sim.finished ? '✓ Finished' : '⏰ Time’s up'}</span>}
         {stuck > 0 && <span className="bad">⚠ {stuck} stuck</span>}
       </div>
-      {sim.incidents.length > 0 && (
+      {sim.incidents.length > 0 && !ended && (
         <ul className="incidents">
           {sim.incidents.map((i) => (
             <li key={`${i.code}-${i.tick}`} title={`${i.evidence}\n\n${i.principle}\n\nHint: ${i.hint}`}>
@@ -65,15 +65,6 @@ export function SimBar({ level }: { level: Level }) {
             </li>
           ))}
         </ul>
-      )}
-      {ended && (
-        <div className={`sim-result ${sim.finished && !failed ? 'good' : 'bad'}`}>
-          {sim.finished
-            ? failed
-              ? `Everything delivered in ${fmt(elapsed)}, but not cleanly. Check the problems above.`
-              : `Everything delivered in ${fmt(elapsed)}!`
-            : `Time’s up. ${sim.delivered} of ${sim.totalTasks} delivered.`}
-        </div>
       )}
     </div>
   );

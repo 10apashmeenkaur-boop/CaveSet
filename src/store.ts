@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { findLevel } from './levels';
 import { costOf, EMPTY_DESIGN, eraseAt, place, type BuildTool, type Design, type Orient, type Side } from './sim/design';
 import { makeWorld, type World } from './sim/pathfinding';
+import { score } from './sim/scoring';
 import { initSim, step, type SimState } from './sim/simulate';
 import type { Tile, ToolId } from './sim/types';
 
@@ -76,6 +77,9 @@ type Store = {
   toggleHeat: () => void;
   /** Why Play was refused, shown to the player. */
   notice: string | null;
+  /** Incident card being inspected (index into sim.incidents): its tiles are highlighted. */
+  focus: number | null;
+  setFocus: (i: number | null) => void;
 };
 
 /** Add newly learned principles to saved progress. */
@@ -106,6 +110,7 @@ export const useStore = create<Store>((set, get) => ({
       world: null,
       running: false,
       notice: null,
+      focus: null,
     }),
   goTo: (screen) => set({ screen }),
   setProgress: (fn) =>
@@ -153,7 +158,7 @@ export const useStore = create<Store>((set, get) => ({
     else set({ running: true });
   },
   pause: () => set({ running: false }),
-  backToDesign: () => set({ mode: 'design', sim: null, world: null, running: false }),
+  backToDesign: () => set({ mode: 'design', sim: null, world: null, running: false, focus: null }),
   setSpeed: (speed) => set({ speed }),
   tick: () => {
     const { levelId, world, sim } = get();
@@ -161,12 +166,19 @@ export const useStore = create<Store>((set, get) => ({
     if (!level || !world || !sim) return;
     const next = step(level, world, sim);
     set({ sim: next, running: get().running && !next.finished && !next.timeUp });
-    // Failing teaches: every incident's principle goes into the Design Journal.
-    if ((next.finished || next.timeUp) && !(sim.finished || sim.timeUp)) unlock(set, next.incidents.map((i) => i.code));
+    if ((next.finished || next.timeUp) && !(sim.finished || sim.timeUp)) {
+      // Failing teaches: every incident's principle goes into the Design Journal.
+      unlock(set, next.incidents.map((i) => i.code));
+      // Keep the best star count per level; any star unlocks the next level.
+      const { stars } = score(level, next, costOf(get().design));
+      if (stars > (get().progress.stars[level.id] ?? 0)) get().setProgress((p) => ({ ...p, stars: { ...p.stars, [level.id]: stars } }));
+    }
   },
   showHeat: false,
   toggleHeat: () => set((s) => ({ showHeat: !s.showHeat })),
   notice: null,
+  focus: null,
+  setFocus: (focus) => set({ focus }),
 }));
 
 export function draftFor(tool: BuildTool, x: number, y: number, orientIdx: number) {

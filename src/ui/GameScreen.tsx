@@ -4,6 +4,7 @@ import { Scene } from '../render/Scene';
 import { useStore } from '../store';
 import { BudgetBar } from './BudgetBar';
 import { QuoteBanner } from './QuoteBanner';
+import { ResultsPanel } from './ResultsPanel';
 import { SimBar } from './SimBar';
 import { Toolbar } from './Toolbar';
 
@@ -12,6 +13,7 @@ export function GameScreen() {
   const levelId = useStore((s) => s.levelId);
   const goTo = useStore((s) => s.goTo);
   const mode = useStore((s) => s.mode);
+  const ended = useStore((s) => !!s.sim && (s.sim.finished || s.sim.timeUp));
   const level = levelId ? findLevel(levelId) : undefined;
 
   // Space: start / pause / resume.
@@ -41,10 +43,14 @@ export function GameScreen() {
         <p>{level.brief}</p>
       </div>
 
-      <div className="hud top-right">
-        <BudgetBar level={level} />
-        <QuoteBanner />
-      </div>
+      {ended ? (
+        <ResultsPanel level={level} />
+      ) : (
+        <div className="hud top-right">
+          <BudgetBar level={level} />
+          <QuoteBanner />
+        </div>
+      )}
 
       {mode === 'design' ? (
         <>
