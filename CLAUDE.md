@@ -16,3 +16,7 @@ Full plan: `PLAN.md`. Build milestone by milestone; commit after each working on
 - Screens: Level select, Game view, Design Journal. (No title menu, no separate brief screen — brief lives in the game HUD.)
 - Look: soft pastel cartoon world + blueprint-style UI panels (grid-paper, navy ink, handwritten accents).
 - Every screen shows a complaint quote (`src/ui/quotes.ts`): short (<8 words), casual, light Hinglish, how real sevadars talk. Each quote belongs to a failure code (TOO_NARROW, HEAD_ON_JAM, SWING_BLOCK, NO_PATH, TIME_LIMIT); M5 speech bubbles reuse them.
+- Dining hall is a soft no-walk: walkable at extra A* cost (DINING_COST), never hard-blocked. Stepping in raises DINING_DISTURBED and diners complain ("Bhaji, khaana kha rahe hain!").
+- Level 2 has fixed walls: kitchen/washing walls plus a brick ring around the dining hall with sangat entrances. Players cut doors (and may brick up entrances).
+- Level 1 budget is ₹7,500 (plan said ₹6,000, which made separate in/out flows unaffordable).
+- Crowds must never deadlock: head-on stand-offs squeeze past after SQUEEZE_TICKS; on a mutual block only the higher-id agent detours. Jams cost time and raise incidents instead.
