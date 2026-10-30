@@ -1,4 +1,4 @@
-import { buildGrid, itemTiles, type Design, type Orient } from './design';
+import { buildGrid, itemTiles, swingTiles, type Design, type Orient } from './design';
 import { getCell, type Grid } from './grid';
 import type { Level, Tile } from './types';
 
@@ -7,22 +7,37 @@ export type World = {
   grid: Grid;
   /** Door orientation per door tile, keyed "x,y". */
   doors: Map<string, Orient>;
+  /** Hinged door tile → the floor tile its leaf sweeps. The door only opens while that tile is empty. */
+  swing: Map<string, Tile>;
 };
 
-const key = (x: number, y: number) => `${x},${y}`;
+/** Walking through people eating is allowed but people avoid it: each dining tile costs this much. */
+export const DINING_COST = 2;
+
+export const key = (x: number, y: number) => `${x},${y}`;
 
 export function makeWorld(level: Level, design: Design): World {
   const doors = new Map<string, Orient>();
+  const swing = new Map<string, Tile>();
   for (const it of design.items) {
     if (it.tool === 'wall') continue;
-    for (const [x, y] of itemTiles(it)) doors.set(key(x, y), it.orient);
+    const tiles = itemTiles(it);
+    const sweeps = swingTiles(it);
+    tiles.forEach(([x, y], i) => {
+      doors.set(key(x, y), it.orient);
+      if (sweeps[i]) swing.set(key(x, y), sweeps[i]);
+    });
   }
-  return { grid: buildGrid(level, design), doors };
+  return { grid: buildGrid(level, design), doors, swing };
 }
 
-function walkable(world: World, x: number, y: number): boolean {
+export function walkable(world: World, x: number, y: number): boolean {
   const c = getCell(world.grid, x, y);
-  return c === 'floor' || c === 'door';
+  return c === 'floor' || c === 'door' || c === 'noWalk';
+}
+
+export function isDining(world: World, x: number, y: number): boolean {
+  return getCell(world.grid, x, y) === 'noWalk';
 }
 
 /** Doors are passed straight through, never walked along. */
@@ -48,15 +63,18 @@ export function canStep(world: World, a: Tile, b: Tile, width: 1 | 2): boolean {
   );
 }
 
-const DIRS: Tile[] = [
+export const DIRS: Tile[] = [
   [1, 0],
   [-1, 0],
   [0, 1],
   [0, -1],
 ];
 
-/** 4-direction A*. Returns the tiles after `from` up to and including `to`, or null. Deterministic tie-breaks. */
-export function findPath(world: World, from: Tile, to: Tile, width: 1 | 2): Tile[] | null {
+/**
+ * 4-direction A*. Returns the tiles after `from` up to and including `to`, or null. Deterministic tie-breaks.
+ * `avoid` holds tiles to treat as blocked (people standing there), used when re-pathing around a jam.
+ */
+export function findPath(world: World, from: Tile, to: Tile, width: 1 | 2, avoid?: Set<string>): Tile[] | null {
   const { w, h } = world.grid;
   const id = (x: number, y: number) => y * w + x;
   const goal = id(to[0], to[1]);
@@ -92,7 +110,8 @@ export function findPath(world: World, from: Tile, to: Tile, width: 1 | 2): Tile
       if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
       const n = id(nx, ny);
       if (closed[n] || !canStep(world, [cx, cy], [nx, ny], width)) continue;
-      const cost = g[i] + 1;
+      if (avoid?.has(key(nx, ny)) && n !== goal) continue;
+      const cost = g[i] + (isDining(world, nx, ny) ? DINING_COST : 1);
       if (cost < g[n]) {
         g[n] = cost;
         came[n] = i;
