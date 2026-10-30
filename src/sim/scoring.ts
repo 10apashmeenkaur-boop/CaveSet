@@ -5,26 +5,27 @@ import type { Level } from './types';
 
 /** Incidents that mean the job wasn't done properly, even if everything arrived. */
 const FAILS: IncidentCode[] = ['NO_PATH', 'TOO_NARROW', 'TIME_LIMIT', 'DINING_DISTURBED'];
-/** Incidents people grumble about: they cost comfort, not the pass. */
+/** Incidents people grumble about: shown as complaints, they don't cost the pass. */
 const COMPLAINTS: IncidentCode[] = ['HEAD_ON_JAM', 'SWING_BLOCK'];
-export const MAX_COMPLAINTS = 2;
-/** Spending at most this share of the budget earns the Thrifty badge. */
-export const THRIFTY_SHARE = 0.8;
 
 export type Check = { label: string; ok: boolean; detail: string };
 
 export type Score = {
   passed: boolean;
-  /** 0 if failed, else 1–3. */
+  /** 0 if failed, else 1-3: one for passing, two if also under target time, three if also at or under the level's starCost. */
   stars: number;
   checks: Check[];
   timeSec: number;
   complaints: number;
-  thrifty: boolean;
 };
 
 export function targetSec(level: Level): number {
   return level.targetSec ?? Math.round(level.timeLimitSec * 0.8);
+}
+
+/** Spend at most this for the third star. Defaults to the full budget. */
+export function starCost(level: Level): number {
+  return level.starCost ?? level.budget;
 }
 
 export function score(level: Level, sim: SimState, cost: number): Score {
@@ -37,7 +38,8 @@ export function score(level: Level, sim: SimState, cost: number): Score {
   const complaints = sim.incidents.filter((i) => COMPLAINTS.includes(i.code)).reduce((n, i) => n + i.count, 0);
   const timed = level.timeLimitSec > 0;
   const quick = passed && (!timed || timeSec <= targetSec(level));
-  const comfy = passed && complaints <= MAX_COMPLAINTS;
+  const cheap = cost <= starCost(level);
+  const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
   const checks: Check[] = [
     {
@@ -53,18 +55,17 @@ export function score(level: Level, sim: SimState, cost: number): Score {
       detail: timed ? `${timeSec.toFixed(1)}s (target ${targetSec(level)}s, limit ${level.timeLimitSec}s)` : `${timeSec.toFixed(1)}s`,
     },
     {
-      label: 'Comfort',
-      ok: comfy,
-      detail: `${complaints} ${complaints === 1 ? 'complaint' : 'complaints'} (jams and door bumps, ${MAX_COMPLAINTS} allowed)`,
+      label: 'Cost',
+      ok: quick && cheap,
+      detail: `${inr(cost)} (${inr(starCost(level))} or less for the third star)`,
     },
   ];
 
   return {
     passed,
-    stars: passed ? 1 + Number(quick) + Number(comfy) : 0,
+    stars: !passed ? 0 : !quick ? 1 : !cheap ? 2 : 3,
     checks,
     timeSec,
     complaints,
-    thrifty: passed && Number.isFinite(level.budget) && cost <= level.budget * THRIFTY_SHARE,
   };
 }

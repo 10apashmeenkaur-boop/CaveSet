@@ -5,7 +5,6 @@
   "grid": { "w": 16, "h": 10 },
   "fixedWalls": [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[8,7],[8,8],[8,9]],
   "editableTiles": "wall-x-8-only",
-  "tutorial": { "id": "l1-doorway:door", "tile": [8, 4], "text": "Click here to add a door" },
   "zones": {
     "kitchen": { "x": 0, "y": 0, "w": 7, "h": 10 },
     "washing": { "x": 9, "y": 0, "w": 7, "h": 10 }
@@ -18,5 +17,7 @@
   "budget": 7500,
   "timeLimitSec": 60,
   "targetSec": 50,
+  "starCost": 7500,
+  "seed": 1,
   "allowedTools": ["door1", "door2", "slide1", "slide2", "oneway"]
 }

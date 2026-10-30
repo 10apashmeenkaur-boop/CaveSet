@@ -8,7 +8,7 @@ import { COLORS } from './palette';
 import { Floor, Props, ZoneLabels } from './World';
 import { AgentsLayer, DinerBubbles, SimRunner } from './Agents';
 import { AudioDirector, CameraDirector, Lighting } from './Feel';
-import { EditableGlow, FlowArrows, TutorialHint } from './Onboarding';
+import { EditableGlow } from './Onboarding';
 import { HeatLayer, IncidentTiles } from './Overlays';
 
 // Isometric-ish view: ~45° yaw, ~35° pitch.
@@ -26,12 +26,11 @@ const MOUSE_BUTTONS = { LEFT: -1 as MOUSE, MIDDLE: MOUSE.PAN, RIGHT: MOUSE.PAN }
 
 export function Scene({ level }: { level: Level }) {
   const mode = useStore((s) => s.mode);
-  const ranOnce = useStore((s) => s.ranOnce);
   return (
     <Canvas shadows style={{ background: COLORS.background }} onContextMenu={(e) => e.preventDefault()}>
       <OrthographicCamera makeDefault position={CAM_POS} zoom={42} near={0.1} far={200} />
       <MapControls makeDefault enableRotate={false} screenSpacePanning minZoom={15} maxZoom={120} mouseButtons={MOUSE_BUTTONS} />
-      <Lighting level={level} />
+      <Lighting />
       <CameraDirector level={level} />
       <AudioDirector level={level} />
       <Floor level={level} />
@@ -41,8 +40,6 @@ export function Scene({ level }: { level: Level }) {
       {mode === 'design' && (
         <>
           <EditableGlow level={level} />
-          <TutorialHint level={level} />
-          {!ranOnce && <FlowArrows level={level} />}
           <GhostLayer level={level} />
         </>
       )}

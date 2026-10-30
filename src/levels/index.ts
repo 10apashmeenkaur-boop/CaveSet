@@ -23,6 +23,7 @@ export const SANDBOX: Level = {
     { type: 'tray', from: 'kitchen', to: 'washing', count: 3, every: 30, delay: 6 },
   ],
   budget: Infinity,
+  seed: 1,
   timeLimitSec: 0,
   allowedTools: ['wall', 'door1', 'door2', 'slide1', 'slide2', 'oneway'],
 };

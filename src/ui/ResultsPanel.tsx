@@ -45,15 +45,15 @@ export function ResultsPanel({ level }: { level: Level }) {
               </div>
             </li>
           ))}
-          {r.thrifty && (
-            <li className="ok">
-              <span className="mark">₹</span>
-              <div>
-                <strong>Thrifty</strong>
-                <span>Well under budget. The committee is impressed.</span>
-              </div>
-            </li>
-          )}
+          <li className="info">
+            <span className="mark">💬</span>
+            <div>
+              <strong>Comfort</strong>
+              <span>
+                {r.complaints} {r.complaints === 1 ? 'complaint' : 'complaints'} (jams and door bumps)
+              </span>
+            </div>
+          </li>
         </ul>
       )}
 

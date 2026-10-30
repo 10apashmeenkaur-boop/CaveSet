@@ -23,3 +23,8 @@ Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 pro
 - Level 1 time limit is 60s. Invariants (tested): one shared double door FAILS on time; two double doors with opposite one-way signs PASS with no jams.
 - All numbers live in `src/sim/constants.ts` (1 tile = 0.6 m; speeds in tiles/s from real m/s). No magic numbers in sim code.
 - Routing is crowd-aware (occupied + recent-wait costs) so people spread over doors.
+- UI: keep the pre-P6 game UI (brief card top-left; budget + quote cards top-right; toolbar with names + prices; Simulate button + sim bar). The user rejected the compact P6 HUD. Ask before changing the UI layout.
+- Sound is off by default (toggle on the level-select screen). No crowd murmur, no slow-mo, no evening lighting. Items drop in with a bounce.
+- Onboarding is only a soft pulsing outline on buildable walls (no hint bubbles, no route labels/arrows).
+- Stars (ROADMAP 8.2 with a per-level `starCost`): 1 = pass, 2 = also within `targetSec`, 3 = also cost ≤ `starCost`. L1 starCost ₹7,500; L2 ₹9,500 (cheapest clean design is ₹9,000).
+- Each level has a fixed `seed` in its JSON, so the same design always gives the same result.

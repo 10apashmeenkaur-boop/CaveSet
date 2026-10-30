@@ -28,8 +28,6 @@ export type Progress = {
   stars: Record<string, number>;
   /** Incident codes whose principles the player has unlocked. */
   principles: string[];
-  /** One-time hints already shown (e.g. "l1-doorway:door"). */
-  seenHints?: string[];
 };
 
 const STORAGE_KEY = 'design-lab.progress.v1';
@@ -82,8 +80,6 @@ type Store = {
 
   // Simulation
   mode: 'design' | 'sim';
-  /** Has the player simulated this level yet (this visit)? Flow arrows show until they have. */
-  ranOnce: boolean;
   sim: SimState | null;
   world: World | null;
   running: boolean;
@@ -126,7 +122,6 @@ export const useStore = create<Store>((set, get) => ({
       orientIdx: 0,
       hover: null,
       mode: 'design',
-      ranOnce: false,
       sim: null,
       world: null,
       running: false,
@@ -155,13 +150,11 @@ export const useStore = create<Store>((set, get) => ({
     const r = resolveDraft(level, design, tool, x, y, get().orientIdx);
     if (!r.relevant || !r.check.ok) return;
     set({ design: place(level, design, r.draft), notice: null });
-    if (TOOL_INFO[tool].door) markHintSeen(`${level.id}:door`);
   },
   eraseAt: (x, y) => set((s) => ({ design: eraseAt(s.design, x, y), notice: null })),
   clearDesign: () => set({ design: EMPTY_DESIGN, notice: null }),
 
   mode: 'design',
-  ranOnce: false,
   sim: null,
   world: null,
   running: false,
@@ -179,7 +172,7 @@ export const useStore = create<Store>((set, get) => ({
       }
     }
     // Starting fresh from design mode bakes the design into a world once.
-    if (mode === 'design') set({ notice: null, ranOnce: true, mode: 'sim', world: makeWorld(level, design), sim: initSim(level), running: true, hover: null });
+    if (mode === 'design') set({ notice: null, mode: 'sim', world: makeWorld(level, design), sim: initSim(level), running: true, hover: null });
     else set({ running: true });
   },
   pause: () => set({ running: false }),
@@ -234,15 +227,6 @@ export function resolveDraft(level: Level, design: Design, tool: BuildTool, x: n
     if (checkPlace(level, design, d).ok) return { draft: d, check: { ok: true }, relevant: true };
   }
   return { draft: base, check: first, relevant: true };
-}
-
-export function hintSeen(id: string): boolean {
-  return useStore.getState().progress.seenHints?.includes(id) ?? false;
-}
-
-export function markHintSeen(id: string) {
-  if (hintSeen(id)) return;
-  useStore.getState().setProgress((p) => ({ ...p, seenHints: [...(p.seenHints ?? []), id] }));
 }
 
 export function orientationOf(orientIdx: number) {

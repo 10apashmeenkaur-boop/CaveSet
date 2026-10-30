@@ -27,8 +27,10 @@ export type Level = {
   spawns: SpawnRule[];
   budget: number;
   timeLimitSec: number;
-  /** One-time pointer for first-time players: an arrow + text on a tile. */
-  tutorial?: { id: string; tile: Tile; text: string };
+  /** Spending at most this (with the Time star) earns the third star. */
+  starCost?: number;
+  /** Fixed RNG seed: the same design always plays out the same way in this level. */
+  seed?: number;
   /** Finishing within this earns the Time star. Defaults to 80% of the limit. */
   targetSec?: number;
   allowedTools: ToolId[];

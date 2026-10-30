@@ -45,7 +45,7 @@ export type SimState = {
 /** Tile key → id of the agent standing on or walking into it. */
 type Occupancy = Map<string, string>;
 
-export function initSim(level: Level, seed = 1): SimState {
+export function initSim(level: Level, seed = level.seed ?? 1): SimState {
   const pending: PendingSpawn[] = [];
   for (const rule of level.spawns) {
     for (let i = 0; i < rule.count; i++) {
@@ -410,7 +410,7 @@ export function step(level: Level, world: World, prev: SimState): SimState {
 }
 
 /** Convenience for tests: run until finished, time up, or maxTicks. */
-export function runToEnd(level: Level, design: Design, seed = 1, maxTicks = 5000): SimState {
+export function runToEnd(level: Level, design: Design, seed = level.seed ?? 1, maxTicks = 5000): SimState {
   const world = makeWorld(level, design);
   let s = initSim(level, seed);
   while (!s.finished && !s.timeUp && s.tick < maxTicks) s = step(level, world, s);

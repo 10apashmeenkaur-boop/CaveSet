@@ -2,7 +2,7 @@ import { Howl, Howler } from 'howler';
 
 /**
  * All game sounds, synthesised at startup into tiny WAVs (no audio files to ship) and played with howler.
- * Mute is remembered per browser.
+ * Sound is OFF by default; the choice is remembered per browser.
  */
 
 const RATE = 22050;
@@ -52,11 +52,6 @@ const VOICES = {
   chime: [0.9, (t: number) => 0.4 * (env(t, 0.005, 0.25) * sin(880, t) + (t > 0.15 ? env(t - 0.15, 0.005, 0.35) * sin(1318.5, t) : 0))],
   /** Run failed: a falling "oops". */
   oops: [0.6, (t: number) => env(t, 0.01, 0.2) * 0.45 * sin(420 - 260 * t, t)],
-  /** Crowd murmur loop: band-limited noise with slow swells. */
-  murmur: [2, (t: number) => {
-    const swell = 0.6 + 0.4 * sin(0.5, t) * sin(1.3, t + 0.2);
-    return 0.35 * swell * (0.5 * noise() + 0.3 * sin(180 + 20 * sin(3, t), t) * noise());
-  }],
 } as const;
 
 type Name = keyof typeof VOICES;
@@ -67,7 +62,7 @@ function load(): Record<Name, Howl> {
   if (!sounds) {
     sounds = {};
     for (const [name, [len, voice]] of Object.entries(VOICES) as [Name, readonly [number, Voice]][]) {
-      sounds[name] = new Howl({ src: [wav(len, voice)], format: ['wav'], loop: name === 'murmur', volume: name === 'murmur' ? 0 : 0.6 });
+      sounds[name] = new Howl({ src: [wav(len, voice)], format: ['wav'], volume: 0.6 });
     }
     Howler.mute(isMuted());
   }
@@ -76,9 +71,9 @@ function load(): Record<Name, Howl> {
 
 export function isMuted(): boolean {
   try {
-    return localStorage.getItem(MUTE_KEY) === '1';
+    return localStorage.getItem(MUTE_KEY) !== '0';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -94,18 +89,9 @@ export function setMuted(muted: boolean) {
 const lastPlayed: Partial<Record<Name, number>> = {};
 
 /** Play a one-shot sound. `minGapMs` stops rapid repeats (e.g. many doors creaking at once). */
-export function sfx(name: Exclude<Name, 'murmur'>, minGapMs = 0) {
+export function sfx(name: Name, minGapMs = 0) {
   const now = performance.now();
   if (minGapMs && now - (lastPlayed[name] ?? -Infinity) < minGapMs) return;
   lastPlayed[name] = now;
   load()[name].play();
-}
-
-/** Crowd noise: 0 = silent, 1 = everyone stuck and grumbling. Fades smoothly. */
-export function murmur(level: number) {
-  const m = load().murmur;
-  if (level > 0 && !m.playing()) m.play();
-  const target = Math.min(0.5, level * 0.6);
-  m.volume(m.volume() + (target - m.volume()) * 0.08);
-  if (level === 0 && m.volume() < 0.01 && m.playing()) m.pause();
 }

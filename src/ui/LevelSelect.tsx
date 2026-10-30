@@ -1,6 +1,26 @@
 import { LEVELS, SANDBOX } from '../levels';
 import { useStore } from '../store';
+import { useState } from 'react';
+import { isMuted, setMuted } from '../audio/sfx';
 import { QuoteBanner } from './QuoteBanner';
+
+/** Sound is off until the player turns it on; remembered per browser. */
+function SoundToggle() {
+  const [muted, setM] = useState(isMuted);
+  return (
+    <button
+      className="btn ghost sound-toggle"
+      onClick={() => {
+        setMuted(!muted);
+        setM(!muted);
+      }}
+      title={muted ? 'Sound is off. Click to turn it on.' : 'Sound is on. Click to turn it off.'}
+      aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
+    >
+      {muted ? '🔇' : '🔊'}
+    </button>
+  );
+}
 
 function Stars({ n }: { n: number }) {
   return (
@@ -20,9 +40,12 @@ export function LevelSelect() {
           <h1>Design Lab</h1>
           <p className="tagline">Design for how a thing is used, not just what it holds.</p>
         </div>
-        <button className="btn ghost" onClick={() => goTo('journal')}>
-          📓 Design Journal
-        </button>
+        <div className="head-buttons">
+          <SoundToggle />
+          <button className="btn ghost" onClick={() => goTo('journal')}>
+            📓 Design Journal
+          </button>
+        </div>
       </header>
 
       <QuoteBanner />

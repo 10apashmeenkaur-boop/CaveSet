@@ -61,6 +61,8 @@
   "budget": 16000,
   "timeLimitSec": 120,
   "targetSec": 85,
+  "starCost": 9500,
+  "seed": 1,
   "allowedTools": [
     "wall",
     "door1",
