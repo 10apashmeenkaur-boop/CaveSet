@@ -242,3 +242,59 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 @media (max-width: 900px) {
   .hud.bottom-right { bottom: auto; top: 140px; }
 }
+
+/* Speech bubbles above heads */
+.bubble {
+  position: relative;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 4px 9px;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  box-shadow: 0 3px 0 rgba(35, 57, 91, 0.18);
+  user-select: none;
+  animation: pop 0.25s ease-out;
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  transform: translateX(-50%) rotate(45deg);
+}
+.bubble.small { background: #e5675a; color: #fff; padding: 1px 8px; }
+.bubble.small::after { background: #e5675a; }
+@keyframes pop {
+  from { transform: translateY(-50%) scale(0.6); opacity: 0; }
+  to { transform: translateY(-50%) scale(1); opacity: 1; }
+}
+
+/* Incidents + over budget */
+.incidents { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 620px; }
+.incidents li {
+  font-size: 13px;
+  font-weight: 600;
+  background: #fde4e1;
+  color: #8e2a1f;
+  border: 1.5px solid #8e2a1f;
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: help;
+}
+.incidents .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e5394b; vertical-align: middle; margin-right: 2px; }
+.incidents .muted { color: #b45c50; font-weight: 400; }
+.play-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.play-wrap .blocked { max-width: 300px; border-radius: 14px; text-align: right; }
+.play-btn.over { background: #e5675a; color: #fff; }
+.journal-quote { font-family: 'Caveat', cursive; font-size: 22px; color: var(--ink) !important; flex: 0 !important; }

@@ -5,22 +5,30 @@ import { useStore } from '../store';
 
 const fmt = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 
-/** Play button in design mode; play/pause, speed, stats and "back to design" while simulating. */
+/** Play button in design mode; play/pause, speed, stats, incidents and "back to design" while simulating. */
 export function SimBar({ level }: { level: Level }) {
-  const { mode, sim, running, speed, play, pause, backToDesign, setSpeed, design } = useStore();
+  const { mode, sim, running, speed, play, pause, backToDesign, setSpeed, design, notice, showHeat, toggleHeat } = useStore();
+  const overBudget = Number.isFinite(level.budget) && costOf(design) > level.budget;
 
   if (mode === 'design' || !sim) {
     return (
-      <button className="btn play-btn" onClick={play} title="Shortcut: Space">
-        ▶ Simulate
-      </button>
+      <div className="play-wrap">
+        {notice && <div className="blocked">{notice}</div>}
+        <button
+          className={`btn play-btn ${overBudget ? 'over' : ''}`}
+          onClick={play}
+          title={overBudget ? 'Over budget: remove something first' : 'Shortcut: Space'}
+        >
+          {overBudget ? '₹ Over budget' : '▶ Simulate'}
+        </button>
+      </div>
     );
   }
 
   const elapsed = sim.tick / TICKS_PER_SEC;
   const stuck = sim.agents.filter((a) => a.state === 'stuck').length;
   const ended = sim.finished || sim.timeUp;
-  const overBudget = Number.isFinite(level.budget) && costOf(design) > level.budget;
+  const failed = sim.incidents.some((i) => ['NO_PATH', 'TOO_NARROW', 'TIME_LIMIT', 'DINING_DISTURBED'].includes(i.code));
 
   return (
     <div className="simbar blueprint">
@@ -35,6 +43,9 @@ export function SimBar({ level }: { level: Level }) {
             {s}×
           </button>
         ))}
+        <button className={`btn ghost small speed ${showHeat ? 'on' : ''}`} onClick={toggleHeat} title="Where people waited">
+          🔥 Heatmap
+        </button>
         <button className="btn ghost small" onClick={backToDesign}>↺ Back to design</button>
       </div>
       <div className="sim-stats">
@@ -45,10 +56,22 @@ export function SimBar({ level }: { level: Level }) {
         <span>📦 {sim.delivered}/{sim.totalTasks} delivered</span>
         {stuck > 0 && <span className="bad">⚠ {stuck} stuck</span>}
       </div>
+      {sim.incidents.length > 0 && (
+        <ul className="incidents">
+          {sim.incidents.map((i) => (
+            <li key={`${i.code}-${i.tick}`} title={`${i.evidence}\n\n${i.principle}\n\nHint: ${i.hint}`}>
+              <span className="dot" /> {i.title}
+              {i.count > 1 && <span className="muted"> ×{i.count}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
       {ended && (
-        <div className={`sim-result ${sim.finished && !overBudget ? 'good' : 'bad'}`}>
+        <div className={`sim-result ${sim.finished && !failed ? 'good' : 'bad'}`}>
           {sim.finished
-            ? `Everything delivered in ${fmt(elapsed)}!${overBudget ? ' But you went over budget.' : ''}`
+            ? failed
+              ? `Everything delivered in ${fmt(elapsed)}, but not cleanly. Check the problems above.`
+              : `Everything delivered in ${fmt(elapsed)}!`
             : `Time’s up. ${sim.delivered} of ${sim.totalTasks} delivered.`}
         </div>
       )}

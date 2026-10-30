@@ -4,8 +4,10 @@ import { useRef } from 'react';
 import type { Group } from 'three';
 import { effectiveType, speedOf, type Agent } from '../sim/agents';
 import { BASE_SPEED, TICKS_PER_SEC } from '../sim/simulate';
-import type { Level } from '../sim/types';
+import type { IncidentCode } from '../sim/failures';
+import type { Level, Tile } from '../sim/types';
 import { useStore } from '../store';
+import { quoteFor } from '../ui/quotes';
 import { tileToWorld } from './coords';
 import { Person } from './Person';
 
@@ -41,9 +43,9 @@ function AgentView({ level, index }: { level: Level; index: number }) {
   // Re-render only when what the person looks like changes; motion happens in useFrame.
   const look = useStore((s) => {
     const a = s.sim?.agents[index];
-    return a ? `${effectiveType(a)}|${a.state}` : '';
+    return a ? `${effectiveType(a)}|${a.state}|${a.complaint ?? ''}|${a.id}` : '';
   });
-  const [type, state] = look.split('|') as [Agent['type'], Agent['state']];
+  const [type, state, complaint, id] = look.split('|') as [Agent['type'], Agent['state'], string, string];
 
   useFrame(() => {
     const a = useStore.getState().sim?.agents[index];
@@ -58,16 +60,50 @@ function AgentView({ level, index }: { level: Level; index: number }) {
   });
 
   if (!look || state === 'done') return null;
-  const n = Number(useStore.getState().sim?.agents[index].id.slice(1) ?? 0);
+  const n = Number(id.slice(1));
+  const line = complaint ? quoteFor(complaint as IncidentCode, id) : null;
 
   return (
     <group ref={group}>
       <Person type={type} position={[0, 0, 0]} skin={n} phase={n * 1.7} walking={state === 'walking'} />
-      {state === 'stuck' && (
-        <Html position={[0, 1.25, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
-          <div className="stuck-mark">?!</div>
-        </Html>
-      )}
+      {line ? <Bubble text={line} height={1.2} /> : state === 'stuck' ? <Bubble text="?!" height={1.2} small /> : null}
+    </group>
+  );
+}
+
+/** White speech card above someone's head. */
+export function Bubble({ text, height, small }: { text: string; height: number; small?: boolean }) {
+  return (
+    <Html position={[0, height, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+      <div className={`bubble ${small ? 'small' : ''}`}>{text}</div>
+    </Html>
+  );
+}
+
+/** Diners complain when someone walks through the langar. One bubble per spot, for a couple of seconds. */
+export function DinerBubbles({ level }: { level: Level }) {
+  const spots = useStore((s) => {
+    const sim = s.sim;
+    if (!sim) return '';
+    const shown: Tile[] = [];
+    for (const d of [...sim.disturbances].reverse()) {
+      if (sim.tick - d.tick > 25 || shown.length >= 3) break;
+      if (!shown.some((t) => Math.abs(t[0] - d.tile[0]) + Math.abs(t[1] - d.tile[1]) < 4)) shown.push(d.tile);
+    }
+    return shown.map((t) => t.join(',')).join(';');
+  });
+  if (!spots) return null;
+  return (
+    <group>
+      {spots.split(';').map((k) => {
+        const [x, y] = k.split(',').map(Number);
+        const [wx, , wz] = tileToWorld(level, x, y);
+        return (
+          <group key={k} position={[wx + 0.6, 0, wz]}>
+            <Bubble text={quoteFor('DINING_DISTURBED', `diner-${k}`)!} height={0.9} />
+          </group>
+        );
+      })}
     </group>
   );
 }

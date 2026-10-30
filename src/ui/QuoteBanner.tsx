@@ -7,7 +7,7 @@ export function QuoteBanner({ codes }: { codes?: FailureCode[] }) {
   return (
     <figure className="quote">
       <blockquote>“{q.text}”</blockquote>
-      <figcaption>— a sevadar, {FAILURE_LABEL[q.code]}</figcaption>
+      <figcaption>— {FAILURE_LABEL[q.code]}</figcaption>
     </figure>
   );
 }

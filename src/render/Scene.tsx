@@ -6,7 +6,8 @@ import { useStore } from '../store';
 import { DesignLayer, GhostLayer, InteractionPlane } from './Build';
 import { COLORS } from './palette';
 import { Floor, Props, ZoneLabels } from './World';
-import { AgentsLayer, SimRunner } from './Agents';
+import { AgentsLayer, DinerBubbles, SimRunner } from './Agents';
+import { HeatLayer, IncidentTiles } from './Overlays';
 
 // Isometric-ish view: ~45° yaw, ~35° pitch.
 const YAW = Math.PI / 4;
@@ -44,7 +45,10 @@ export function Scene({ level }: { level: Level }) {
       <DesignLayer level={level} />
       {mode === 'design' && <GhostLayer level={level} />}
       <InteractionPlane level={level} />
+      <HeatLayer level={level} />
+      <IncidentTiles level={level} />
       <AgentsLayer level={level} />
+      <DinerBubbles level={level} />
       <SimRunner />
     </Canvas>
   );

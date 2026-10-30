@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { findLevel } from './levels';
-import { EMPTY_DESIGN, eraseAt, place, type BuildTool, type Design, type Orient, type Side } from './sim/design';
+import { costOf, EMPTY_DESIGN, eraseAt, place, type BuildTool, type Design, type Orient, type Side } from './sim/design';
 import { makeWorld, type World } from './sim/pathfinding';
 import { initSim, step, type SimState } from './sim/simulate';
 import type { Tile, ToolId } from './sim/types';
@@ -72,7 +72,22 @@ type Store = {
   backToDesign: () => void;
   setSpeed: (speed: 1 | 2 | 4) => void;
   tick: () => void;
+  showHeat: boolean;
+  toggleHeat: () => void;
+  /** Why Play was refused, shown to the player. */
+  notice: string | null;
 };
+
+/** Add newly learned principles to saved progress. */
+function unlock(set: (fn: (s: Store) => Partial<Store>) => void, codes: string[]) {
+  set((s) => {
+    const fresh = codes.filter((c) => !s.progress.principles.includes(c));
+    if (!fresh.length) return {};
+    const progress = { ...s.progress, principles: [...s.progress.principles, ...fresh] };
+    saveProgress(progress);
+    return { progress };
+  });
+}
 
 export const useStore = create<Store>((set, get) => ({
   screen: 'levels',
@@ -90,6 +105,7 @@ export const useStore = create<Store>((set, get) => ({
       sim: null,
       world: null,
       running: false,
+      notice: null,
     }),
   goTo: (screen) => set({ screen }),
   setProgress: (fn) =>
@@ -110,10 +126,10 @@ export const useStore = create<Store>((set, get) => ({
     const { levelId, tool, design } = get();
     const level = levelId ? findLevel(levelId) : undefined;
     if (!level || tool === 'eraser') return;
-    set({ design: place(level, design, draftFor(tool, x, y, get().orientIdx)) });
+    set({ design: place(level, design, draftFor(tool, x, y, get().orientIdx)), notice: null });
   },
-  eraseAt: (x, y) => set((s) => ({ design: eraseAt(s.design, x, y) })),
-  clearDesign: () => set({ design: EMPTY_DESIGN }),
+  eraseAt: (x, y) => set((s) => ({ design: eraseAt(s.design, x, y), notice: null })),
+  clearDesign: () => set({ design: EMPTY_DESIGN, notice: null }),
 
   mode: 'design',
   sim: null,
@@ -124,8 +140,16 @@ export const useStore = create<Store>((set, get) => ({
     const { mode, levelId, design } = get();
     const level = levelId ? findLevel(levelId) : undefined;
     if (!level) return;
+    if (mode === 'design') {
+      const over = costOf(design) - level.budget;
+      if (over > 0) {
+        set({ notice: `Over budget by ₹${over.toLocaleString('en-IN')}. Remove something before you simulate.` });
+        unlock(set, ['OVER_BUDGET']);
+        return;
+      }
+    }
     // Starting fresh from design mode bakes the design into a world once.
-    if (mode === 'design') set({ mode: 'sim', world: makeWorld(level, design), sim: initSim(level), running: true, hover: null });
+    if (mode === 'design') set({ notice: null, mode: 'sim', world: makeWorld(level, design), sim: initSim(level), running: true, hover: null });
     else set({ running: true });
   },
   pause: () => set({ running: false }),
@@ -137,7 +161,12 @@ export const useStore = create<Store>((set, get) => ({
     if (!level || !world || !sim) return;
     const next = step(level, world, sim);
     set({ sim: next, running: get().running && !next.finished && !next.timeUp });
+    // Failing teaches: every incident's principle goes into the Design Journal.
+    if ((next.finished || next.timeUp) && !(sim.finished || sim.timeUp)) unlock(set, next.incidents.map((i) => i.code));
   },
+  showHeat: false,
+  toggleHeat: () => set((s) => ({ showHeat: !s.showHeat })),
+  notice: null,
 }));
 
 export function draftFor(tool: BuildTool, x: number, y: number, orientIdx: number) {

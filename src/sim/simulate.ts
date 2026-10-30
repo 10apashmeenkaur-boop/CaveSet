@@ -1,7 +1,8 @@
 import { speedOf, widthOf, type Agent, type WaitReason } from './agents';
 import type { Design } from './design';
 import { getCell } from './grid';
-import { canStep, DIRS, findPath, key, makeWorld, type World } from './pathfinding';
+import { complaintOf, detect, type Incident } from './failures';
+import { canStep, DIRS, findPath, isDining, key, makeWorld, type World } from './pathfinding';
 import { rand } from './rng';
 import type { AgentType, Level, Tile, Zone } from './types';
 
@@ -30,6 +31,9 @@ export type SimState = {
   totalTasks: number;
   /** Total ticks people spent waiting on each tile (row-major), for the congestion heatmap. */
   heat: number[];
+  incidents: Incident[];
+  /** Recent steps onto dining tiles, newest last (diners complain about these). */
+  disturbances: { tile: Tile; tick: number; agent: string }[];
   finished: boolean;
   timeUp: boolean;
 };
@@ -56,6 +60,8 @@ export function initSim(level: Level, seed = 1): SimState {
     delivered: 0,
     totalTasks,
     heat: new Array(level.grid.w * level.grid.h).fill(0),
+    incidents: [],
+    disturbances: [],
     finished: false,
     timeUp: false,
   };
@@ -242,6 +248,7 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
     a.progress -= 1;
     a.pos = a.next;
     a.next = null;
+    if (isDining(world, a.pos[0], a.pos[1])) s.disturbances.push({ tile: a.pos, tick: s.tick, agent: a.id });
     if (reached(a)) return arrive(world, { ...a, progress: 0 }, s);
     if (!a.path.length) {
       a.progress = 0;
@@ -258,7 +265,14 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
 /** Advance one tick. Pure: returns a new state. */
 export function step(level: Level, world: World, prev: SimState): SimState {
   if (prev.finished || prev.timeUp) return prev;
-  const s: SimState = { ...prev, tick: prev.tick + 1, pending: [...prev.pending], agents: [...prev.agents], heat: [...prev.heat] };
+  const s: SimState = {
+    ...prev,
+    tick: prev.tick + 1,
+    pending: [...prev.pending],
+    agents: [...prev.agents],
+    heat: [...prev.heat],
+    disturbances: prev.disturbances.filter((d) => d.tick > prev.tick - 30),
+  };
   const occ = occupancy(world, s.agents);
 
   // Spawn whoever is due, unless someone is standing on their start tile (then they wait their turn).
@@ -299,6 +313,24 @@ export function step(level: Level, world: World, prev: SimState): SimState {
 
   s.finished = !s.pending.length && s.agents.every((a) => a.state === 'done');
   s.timeUp = level.timeLimitSec > 0 && s.tick >= level.timeLimitSec * TICKS_PER_SEC && !s.finished;
+
+  const byId = new Map(s.agents.map((a) => [a.id, a]));
+  s.agents = s.agents.map((a) => {
+    const complaint = complaintOf(a, byId, s.timeUp);
+    return complaint === a.complaint ? a : { ...a, complaint };
+  });
+  s.incidents = detect(prev.incidents, {
+    tick: s.tick,
+    agents: s.agents,
+    diningSteps: s.disturbances.filter((d) => d.tick === s.tick),
+    timeUp: s.timeUp,
+    ended: s.finished || s.timeUp,
+    delivered: s.delivered,
+    totalTasks: s.totalTasks,
+    timeLimitSec: level.timeLimitSec,
+    heat: s.heat,
+    gridW: level.grid.w,
+  });
   return s;
 }
 

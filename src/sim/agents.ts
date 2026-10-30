@@ -1,3 +1,4 @@
+import type { IncidentCode } from './failures';
 import type { AgentType, Tile } from './types';
 
 export const AGENT_INFO: Record<AgentType, { width: 1 | 2; speed: number; label: string }> = {
@@ -35,6 +36,8 @@ export type Agent = {
   stuckReason?: StuckReason;
   /** Last movement direction, for facing. */
   dir: Tile;
+  /** What they're complaining about right now (speech bubble). */
+  complaint?: IncidentCode;
 };
 
 /** Crate and tray carriers only count as their type while carrying; afterwards they walk like anyone else. */
