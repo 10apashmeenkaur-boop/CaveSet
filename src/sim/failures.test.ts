@@ -140,9 +140,8 @@ describe('one-way signs', () => {
     expect(checkPlace(l1, withSign(1), { tool: 'oneway', x: 8, y: 5, orient: 'v', swing: -1 }).ok).toBe(false);
   });
 
-  it('erasing the door takes its sign; erasing the sign keeps the door', () => {
-    expect(eraseAt(withSign(1), 8, 4).items).toHaveLength(1); // sign goes first
-    expect(eraseAt(eraseAt(withSign(1), 8, 4), 8, 4).items).toHaveLength(0);
+  it('one eraser click on a signed door removes the door and its sign together', () => {
+    expect(eraseAt(withSign(1), 8, 4).items).toHaveLength(0);
   });
 
   it('two doors signed the same way leave the return trip with no path', () => {

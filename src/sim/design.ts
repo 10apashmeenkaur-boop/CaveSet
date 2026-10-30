@@ -162,9 +162,23 @@ export function place(level: Level, design: Design, raw: Draft): Design {
   return { items: [...design.items, { ...draft, id: design.nextId }], nextId: design.nextId + 1 };
 }
 
-/** Remove whatever covers (x, y); a removed door takes its sign with it. Design mode refunds 100%. */
+/** Every tile that belongs to an object, for the eraser: its own tiles, a door's swing area, a station's standing spot. */
+export function objectTiles(item: Draft): Tile[] {
+  return [...itemTiles(item), ...swingTiles(item), ...(TOOL_INFO[item.tool].station ? [serveTile(item)] : [])];
+}
+
+/**
+ * The whole object the eraser takes at (x, y): whatever is built on the tile, else a door whose swing
+ * or a station whose standing spot is there. (A door's sign goes with the door.)
+ */
+export function eraseTarget(design: Design, x: number, y: number): Placed | undefined {
+  const objects = design.items.filter((it) => !isSign(it));
+  return objects.find((it) => covers(it, x, y)) ?? objects.find((it) => objectTiles(it).some(([tx, ty]) => tx === x && ty === y));
+}
+
+/** Remove the whole object at (x, y); a removed door takes its sign with it. Design mode refunds 100%. */
 export function eraseAt(design: Design, x: number, y: number): Design {
-  const hit = itemAt(design, x, y);
+  const hit = eraseTarget(design, x, y);
   if (!hit) return design;
   const sign = TOOL_INFO[hit.tool].door ? signOn(design, hit) : undefined;
   return { ...design, items: design.items.filter((it) => it !== hit && it !== sign) };

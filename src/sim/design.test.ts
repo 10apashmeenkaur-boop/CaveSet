@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getCell } from './grid';
-import { buildGrid, checkPlace, costOf, EMPTY_DESIGN, eraseAt, place, swingTiles, type Draft } from './design';
+import { buildGrid, checkPlace, costOf, EMPTY_DESIGN, eraseAt, eraseTarget, place, swingTiles, type Draft } from './design';
 import { LEVELS } from '../levels';
 
 const [l1, l2] = LEVELS;
@@ -63,5 +63,24 @@ describe('swing + grid', () => {
     const g = buildGrid(l1, place(l1, EMPTY_DESIGN, door()));
     expect(getCell(g, 8, 4)).toBe('door');
     expect(getCell(g, 8, 3)).toBe('wall');
+  });
+});
+
+describe('eraser takes the whole object', () => {
+  const l3 = LEVELS[2];
+  it("clicking a door's swing area removes the door", () => {
+    const d = place(l1, EMPTY_DESIGN, door()); // swings into (9,4)
+    expect(eraseAt(d, 9, 4).items).toHaveLength(0);
+  });
+
+  it("clicking a station's standing spot removes the station", () => {
+    const d = place(l3, EMPTY_DESIGN, { tool: 'tap', x: 7, y: 5, orient: 'h', swing: -1 }); // stands at (7,4)
+    expect(eraseTarget(d, 7, 4)?.tool).toBe('tap');
+    expect(eraseAt(d, 7, 4).items).toHaveLength(0);
+  });
+
+  it('empty floor erases nothing', () => {
+    const d = place(l1, EMPTY_DESIGN, door());
+    expect(eraseAt(d, 2, 2)).toBe(d);
   });
 });

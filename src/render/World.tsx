@@ -1,6 +1,8 @@
 import { Html } from '@react-three/drei';
 import { useMemo } from 'react';
+import { getCell, gridFromLevel } from '../sim/grid';
 import type { Level, Zone } from '../sim/types';
+import { WALL_H } from './Items';
 import { tileToWorld } from './coords';
 import { COLORS } from './palette';
 import { Person } from './Person';
@@ -11,7 +13,7 @@ const ZONE_NAMES: Record<string, string> = {
   dining: 'Dining hall',
   entrance: 'Entrance',
   exit: 'Exit',
-  shoes: 'Shoes',
+  shoes: 'Shoe stand',
   wash: 'Hand wash',
   basket: 'Head covers',
   hall: 'Dining hall',
@@ -65,16 +67,41 @@ function GridLines({ w, h }: { w: number; h: number }) {
   );
 }
 
-/** Floating name tag at the far edge of each zone. */
-export function ZoneLabels({ level }: { level: Level }) {
+const SIGN_POST_H = 1.25;
+
+/** Where a zone's sign goes: on the wall right behind the zone's far edge (nearest its middle), else on a little post there. */
+function signSpot(z: Zone, isWall: (x: number, y: number) => boolean): { tile: [number, number]; onWall: boolean } {
+  const mid = z.x + Math.floor((z.w - 1) / 2);
+  const along = Array.from({ length: z.w }, (_, i) => z.x + i).sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid));
+  const top = along.find((x) => isWall(x, z.y - 1));
+  if (top !== undefined) return { tile: [top, z.y - 1], onWall: true };
+  return { tile: [mid, z.y], onWall: false };
+}
+
+/** A painted signboard for every zone: on the nearest wall (or a post), always facing the camera and drawn over people. */
+export function Signboards({ level }: { level: Level }) {
+  const spots = useMemo(() => {
+    const grid = gridFromLevel(level);
+    const isWall = (x: number, y: number) => getCell(grid, x, y) === 'wall';
+    return Object.entries(level.zones).map(([name, z]) => ({ name, ...signSpot(z, isWall) }));
+  }, [level]);
   return (
     <group>
-      {Object.entries(level.zones).map(([name, z]) => {
-        const [cx, , cz] = tileToWorld(level, z.x + z.w / 2 - 0.5, z.y);
+      {spots.map(({ name, tile, onWall }) => {
+        const [wx, , wz] = tileToWorld(level, ...tile);
+        const top = onWall ? WALL_H : SIGN_POST_H;
         return (
-          <Html key={name} position={[cx, 0.05, cz - 0.9]} center zIndexRange={[0, 0]} style={{ pointerEvents: 'none' }}>
-            <div className={`zone-label zone-${name}`}>{ZONE_NAMES[name] ?? name}</div>
-          </Html>
+          <group key={name} position={[wx, 0, wz]}>
+            {!onWall && (
+              <mesh position={[0, SIGN_POST_H / 2, 0]} castShadow>
+                <cylinderGeometry args={[0.05, 0.06, SIGN_POST_H, 8]} />
+                <meshStandardMaterial color={COLORS.post} flatShading />
+              </mesh>
+            )}
+            <Html position={[0, top + 0.05, 0]} zIndexRange={[3, 0]} style={{ pointerEvents: 'none', transform: 'translate(-50%, -100%)' }}>
+              <div className={`signboard sign-${name}`}>{ZONE_NAMES[name] ?? name}</div>
+            </Html>
+          </group>
         );
       })}
     </group>

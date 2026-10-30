@@ -5,10 +5,10 @@ import type { Level } from '../sim/types';
 import { useStore } from '../store';
 import { DesignLayer, GhostLayer, InteractionPlane } from './Build';
 import { COLORS } from './palette';
-import { Floor, Props, ZoneLabels } from './World';
+import { Floor, Props, Signboards } from './World';
 import { AgentsLayer, BestRunGhosts, DinerBubbles, SimRunner } from './Agents';
 import { AudioDirector, CameraDirector, Lighting } from './Feel';
-import { EditableGlow } from './Onboarding';
+import { EditableGlow, RouteArrows } from './Onboarding';
 import { BusiestMarker, HeatLayer, IncidentTiles } from './Overlays';
 
 // Isometric-ish view: ~45° yaw, ~35° pitch.
@@ -35,7 +35,8 @@ export function Scene({ level }: { level: Level }) {
       <AudioDirector level={level} />
       <Floor level={level} />
       <Props level={level} />
-      <ZoneLabels level={level} />
+      <Signboards level={level} />
+      <RouteArrows level={level} />
       <DesignLayer level={level} />
       {mode === 'design' && (
         <>

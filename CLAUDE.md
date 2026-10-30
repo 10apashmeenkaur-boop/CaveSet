@@ -12,7 +12,7 @@ Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 pro
 
 ## Decisions (agreed with user)
 - No login. Progress (stars, unlocked principles) saved in localStorage, wrapped in try/catch.
-- Characters: generic cartoon bobble-heads (round body, big head, dot eyes), bouncy walk, no limbs. Shirt color = role. No cultural attire.
+- Characters: generic cartoon bobble-heads (rounded torso, big head, dot eyes, small legs and feet), gentle bob (not bouncy balls). Shirt color = role. No cultural attire.
 - Screens: Level select, Game view, Design Journal. (No title menu, no separate brief screen — brief lives in the game HUD.)
 - Look: soft pastel cartoon world + blueprint-style UI panels (grid-paper, navy ink, handwritten accents).
 - Every screen shows a complaint quote (`src/ui/quotes.ts`); in a level that card is Mistri Ji instead: short (<8 words), casual, light Hinglish, how real sevadars talk. Each quote belongs to a failure code (TOO_NARROW, HEAD_ON_JAM, SWING_BLOCK, NO_PATH, TIME_LIMIT); M5 speech bubbles reuse them.
@@ -24,8 +24,10 @@ Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 pro
 - All numbers live in `src/sim/constants.ts` (1 tile = 0.6 m; speeds in tiles/s from real m/s). No magic numbers in sim code.
 - Routing is crowd-aware (occupied + recent-wait costs) so people spread over doors.
 - UI: keep the pre-P6 game UI (brief card top-left; budget + quote cards top-right; toolbar with names + prices; Simulate button + sim bar). The user rejected the compact P6 HUD. Ask before changing the UI layout.
-- Sound is off by default (toggle on the level-select screen). No crowd murmur, no slow-mo, no evening lighting. Items drop in with a bounce.
-- Onboarding is only a soft pulsing outline on buildable walls (no hint bubbles, no route labels/arrows).
+- Sound is off by default (toggle on the level-select screen) and soft: sine tones, smooth attack/release, low pitch, short. Volume slider next to the toggle (default 40%). A temporary set picker + "Sound test" button there lets the user choose between 3 soft sets. No crowd murmur, no slow-mo, no evening lighting. Items drop in with a bounce.
+- Onboarding: a soft pulsing outline on buildable walls, plus dotted moving route arrows along the real routes (design mode only; they fade when the sim starts). No hint bubbles, no route label pills.
+- Every zone has a painted signboard on the wall behind its far edge (or on a post if there's none), always facing the camera. Speech bubbles are only for what people say, never place names.
+- Eraser: one click (or right-click, or drag) on any tile of an object removes the whole object: door + its sign, its swing area, a station + its standing spot, a rail. Hover shows everything that will go in red.
 - Stars (ROADMAP 8.2 with a per-level `starCost`): 1 = pass, 2 = also within `targetSec`, 3 = also cost ≤ `starCost`. L1 starCost ₹7,500; L2 ₹9,500 (cheapest clean design is ₹9,000).
 - Each level has a fixed `seed` in its JSON, so the same design always gives the same result.
 - Level 3 "Langar Queue" (21×12): sangat visits shoe stand (4s) → tap (6s) → head-cover basket (2s) → seat; 5 waves of 10 every 20s; seats fill from the back. A previous pangat of 16 sits nearest the exit and leaves in groups of 4; the hall opening is at the top, so without a low exit door they walk out through the line (CROSS_FLOW). Two fixed baskets (players can't build baskets, so one would be an unfixable bottleneck). A station's standing spot can't touch another's (otherwise people get boxed in). Budget ₹12,000, 3 min, targetSec 150, starCost ₹9,500 (cheapest clean: 3 shoe stands + 3 taps + hinged exit door = ₹9,000). Twist tested: one shoe stand + more taps still fails.

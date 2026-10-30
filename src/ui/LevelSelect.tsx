@@ -1,24 +1,70 @@
 import { LEVELS, SANDBOX } from '../levels';
 import { useStore } from '../store';
 import { useEffect, useState } from 'react';
-import { isMuted, setMuted } from '../audio/sfx';
+import { getSoundSet, getVolume, isMuted, playDemo, setMuted, setSoundSet, setVolume, SOUND_SETS } from '../audio/sfx';
 import { QuoteBanner } from './QuoteBanner';
 
-/** Sound is off until the player turns it on; remembered per browser. */
-function SoundToggle() {
+/** Sound on/off (off until the player turns it on), volume, and a temporary sound-set test. All remembered per browser. */
+function SoundControls() {
   const [muted, setM] = useState(isMuted);
+  const [volume, setV] = useState(getVolume);
+  const [set, setS] = useState(getSoundSet);
+  const toggle = (on: boolean) => {
+    setMuted(!on);
+    setM(!on);
+  };
   return (
-    <button
-      className="btn ghost sound-toggle"
-      onClick={() => {
-        setMuted(!muted);
-        setM(!muted);
-      }}
-      title={muted ? 'Sound is off. Click to turn it on.' : 'Sound is on. Click to turn it off.'}
-      aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
-    >
-      {muted ? '🔇' : '🔊'}
-    </button>
+    <div className="sound-controls">
+      <button
+        className="btn ghost sound-toggle"
+        onClick={() => toggle(muted)}
+        title={muted ? 'Sound is off. Click to turn it on.' : 'Sound is on. Click to turn it off.'}
+        aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
+      >
+        {muted ? '🔇' : '🔊'}
+      </button>
+      <input
+        className="volume"
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(volume * 100)}
+        onChange={(e) => {
+          const v = Number(e.target.value) / 100;
+          setVolume(v);
+          setV(v);
+        }}
+        aria-label="Volume"
+        title={`Volume ${Math.round(volume * 100)}%`}
+      />
+      {/* Temporary: pick a sound set by ear. */}
+      <select
+        className="sound-set"
+        value={set}
+        onChange={(e) => {
+          const i = Number(e.target.value);
+          setSoundSet(i);
+          setS(i);
+        }}
+        aria-label="Sound set"
+      >
+        {SOUND_SETS.map((s, i) => (
+          <option key={s.name} value={i}>
+            Set {i + 1}: {s.name}
+          </option>
+        ))}
+      </select>
+      <button
+        className="btn ghost small"
+        onClick={() => {
+          toggle(true);
+          playDemo();
+        }}
+        title="Plays every sound in this set (turns sound on)"
+      >
+        🔈 Sound test
+      </button>
+    </div>
   );
 }
 
@@ -51,7 +97,7 @@ export function LevelSelect() {
           <p className="tagline">Design for how a thing is used, not just what it holds.</p>
         </div>
         <div className="head-buttons">
-          <SoundToggle />
+          <SoundControls />
           <button className="btn ghost" onClick={() => goTo('journal')}>
             📓 Mistri Ji ki diary
           </button>

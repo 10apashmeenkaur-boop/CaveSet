@@ -1,6 +1,6 @@
 import type { ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { buildGrid, doorAt, itemAt, itemTiles, serveTile, stationsOf, TOOL_INFO } from '../sim/design';
+import { buildGrid, doorAt, eraseTarget, itemTiles, objectTiles, serveTile, stationsOf, TOOL_INFO } from '../sim/design';
 import { getCell } from '../sim/grid';
 import { EMPTY_DESIGN } from '../sim/design';
 import type { Level } from '../sim/types';
@@ -8,7 +8,7 @@ import { resolveDraft, useStore } from '../store';
 import { sfx } from '../audio/sfx';
 import { tileToWorld } from './coords';
 import { DropIn } from './Feel';
-import { DoorItem, RailItem, SignItem, StationItem, WallBlock } from './Items';
+import { DoorItem, RailItem, SignItem, StationItem, WALL_H, WallBlock } from './Items';
 import { COLORS } from './palette';
 
 /** Every wall tile (fixed + placed) and every placed door. */
@@ -83,13 +83,33 @@ export function GhostLayer({ level }: { level: Level }) {
   const [x, y] = hover;
 
   if (tool === 'eraser') {
-    const hit = itemAt(design, x, y);
-    const tiles = hit ? itemTiles(hit) : [hover];
+    const hit = eraseTarget(design, x, y);
+    if (!hit) return <TileOutline level={level} x={x} y={y} color={COLORS.hover} />;
+    // Everything that will go: red floor under the whole object (swing area, standing spot too), red shell over its body.
     return (
       <group>
-        {tiles.map(([tx, ty]) => (
-          <TileOutline key={`${tx},${ty}`} level={level} x={tx} y={ty} color={hit ? '#e5675a' : COLORS.hover} />
-        ))}
+        {objectTiles(hit).map(([tx, ty]) => {
+          const [wx, , wz] = tileToWorld(level, tx, ty);
+          return (
+            <group key={`${tx},${ty}`}>
+              <TileOutline level={level} x={tx} y={ty} color={COLORS.erase} />
+              <mesh position={[wx, 0.03, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.96, 0.96]} />
+                <meshBasicMaterial color={COLORS.erase} transparent opacity={0.35} depthWrite={false} />
+              </mesh>
+            </group>
+          );
+        })}
+        {itemTiles(hit).map(([tx, ty]) => {
+          const [wx, , wz] = tileToWorld(level, tx, ty);
+          const h = hit.tool === 'wall' || TOOL_INFO[hit.tool].door ? WALL_H : 0.9;
+          return (
+            <mesh key={`shell-${tx},${ty}`} position={[wx, h / 2, wz]}>
+              <boxGeometry args={[1.06, h + 0.06, 1.06]} />
+              <meshBasicMaterial color={COLORS.erase} transparent opacity={0.4} depthWrite={false} />
+            </mesh>
+          );
+        })}
       </group>
     );
   }

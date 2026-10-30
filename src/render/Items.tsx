@@ -189,13 +189,16 @@ export function StationItem({ level, kind, tile, serve, ghost }: { level: Level;
             <boxGeometry args={[0.9, 0.8, 0.6]} />
             <Mat color={COLORS.shoeRack} ghost={ghost} />
           </mesh>
-          {[0.22, 0.55].flatMap((y) =>
-            [-0.27, 0, 0.27].map((sx) => (
-              <mesh key={`${y}-${sx}`} position={[sx, y, 0.26]}>
-                <boxGeometry args={[0.22, 0.2, 0.02]} />
-                <Mat color={COLORS.slot} ghost={ghost} />
-              </mesh>
-            )),
+          {/* Cubbies open on both sides, so the rack reads as a shoe stand from any angle. */}
+          {[0.26, -0.36].flatMap((z) =>
+            [0.22, 0.55].flatMap((y) =>
+              [-0.27, 0, 0.27].map((sx) => (
+                <mesh key={`${z}-${y}-${sx}`} position={[sx, y, z]}>
+                  <boxGeometry args={[0.22, 0.2, 0.02]} />
+                  <Mat color={COLORS.slot} ghost={ghost} />
+                </mesh>
+              )),
+            ),
           )}
         </>
       )}

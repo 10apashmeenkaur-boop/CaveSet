@@ -413,3 +413,35 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .diary-card .diary-example, .diary-card .diary-number { font-size: 14px; }
 .diary-card .diary-number { font-weight: 600; color: var(--ink); }
 .diary-by { font-family: inherit; font-size: 13px; color: var(--ink-soft); }
+
+/* Painted signboards on walls / posts: always face the camera, drawn over the 3D scene. */
+.signboard {
+  margin-bottom: 2px;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff8e6;
+  background: #23395b;
+  border: 3px solid #fff8e6;
+  outline: 2px solid #23395b;
+  border-radius: 6px;
+  padding: 3px 12px;
+  white-space: nowrap;
+  user-select: none;
+  box-shadow: 0 3px 0 rgba(35, 57, 91, 0.35);
+}
+.signboard.sign-entrance, .signboard.sign-exit { background: #2f7d4f; outline-color: #2f7d4f; }
+
+/* Sound controls on level select */
+.sound-controls { display: flex; align-items: center; gap: 8px; }
+.sound-controls .volume { width: 90px; accent-color: var(--ink); }
+.sound-controls .sound-set {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fffdf5;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  padding: 4px 6px;
+}
