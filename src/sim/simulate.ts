@@ -1,13 +1,21 @@
-import { speedOf, widthOf, type Agent } from './agents';
+import { speedOf, widthOf, type Agent, type WaitReason } from './agents';
 import type { Design } from './design';
 import { getCell } from './grid';
-import { canStep, findPath, makeWorld, type World } from './pathfinding';
+import { canStep, DIRS, findPath, key, makeWorld, type World } from './pathfinding';
 import { rand } from './rng';
 import type { AgentType, Level, Tile, Zone } from './types';
 
 export const TICKS_PER_SEC = 10;
 /** Tiles per second at speed 1.0. */
 export const BASE_SPEED = 2;
+/** Waiting this long: look for another route around whoever is in the way. */
+export const REPATH_TICKS = 15;
+/** Two people blocking each other head-on for this long squeeze past each other (slowly, awkwardly). */
+export const SQUEEZE_TICKS = 35;
+/** Waiting this long: step aside to let the other person through. */
+export const SIDESTEP_TICKS = 40;
+/** Waiting this long counts as stuck (but keeps trying). */
+export const STUCK_TICKS = 60;
 
 type PendingSpawn = { tick: number; type: AgentType; from: string; to: string };
 
@@ -20,9 +28,14 @@ export type SimState = {
   /** Loads dropped at their goal, out of `totalTasks`. */
   delivered: number;
   totalTasks: number;
+  /** Total ticks people spent waiting on each tile (row-major), for the congestion heatmap. */
+  heat: number[];
   finished: boolean;
   timeUp: boolean;
 };
+
+/** Tile key → id of the agent standing on or walking into it. */
+type Occupancy = Map<string, string>;
 
 export function initSim(level: Level, seed = 1): SimState {
   const pending: PendingSpawn[] = [];
@@ -34,7 +47,18 @@ export function initSim(level: Level, seed = 1): SimState {
   // Stable sort keeps rule order for equal ticks, so spawning is deterministic.
   pending.sort((a, b) => a.tick - b.tick);
   const totalTasks = level.spawns.filter((r) => r.type !== 'elderly').reduce((n, r) => n + r.count, 0);
-  return { tick: 0, rng: seed, agents: [], pending, nextId: 1, delivered: 0, totalTasks, finished: false, timeUp: false };
+  return {
+    tick: 0,
+    rng: seed,
+    agents: [],
+    pending,
+    nextId: 1,
+    delivered: 0,
+    totalTasks,
+    heat: new Array(level.grid.w * level.grid.h).fill(0),
+    finished: false,
+    timeUp: false,
+  };
 }
 
 /** Column on the zone's outer edge (where counters and sinks are), or its middle if it touches neither side. */
@@ -58,6 +82,30 @@ function pickServiceTile(level: Level, world: World, zoneName: string, rng: numb
   return [[x, y0], next];
 }
 
+/**
+ * Tiles an agent blocks at t. Everyone takes one tile, except a crate carrier in a doorway fills the whole door.
+ * (Width still decides where a carrier can fit at all; see canStep.)
+ */
+export function footprint(world: World, t: Tile, width: 1 | 2): Tile[] {
+  if (width === 2) return world.doorTiles.get(key(t[0], t[1])) ?? [t];
+  return [t];
+}
+
+function occupancy(world: World, agents: Agent[]): Occupancy {
+  const occ: Occupancy = new Map();
+  for (const a of agents) {
+    if (a.state === 'done') continue;
+    for (const [x, y] of footprint(world, a.pos, widthOf(a))) occ.set(key(x, y), a.id);
+    if (a.next) for (const [x, y] of footprint(world, a.next, widthOf(a))) occ.set(key(x, y), a.id);
+  }
+  return occ;
+}
+
+const idNum = (a: Agent) => Number(a.id.slice(1));
+const same = (a: Tile, b: Tile) => a[0] === b[0] && a[1] === b[1];
+/** Goals are on a counter/sink column: reaching the column anywhere counts, so people don't queue for one exact tile. */
+const reached = (a: Agent) => a.pos[0] === a.goal[0];
+
 /** Plan a route. If the agent is too wide for every route, it heads for the narrow one and gets stuck there. */
 function plan(world: World, a: Agent): Agent {
   const route = findPath(world, a.pos, a.goal, widthOf(a)) ?? (widthOf(a) === 2 ? findPath(world, a.pos, a.goal, 1) : null);
@@ -74,46 +122,160 @@ function arrive(world: World, a: Agent, s: SimState): Agent {
   return { ...a, state: 'done' };
 }
 
-function move(world: World, a: Agent, s: SimState): Agent {
-  if (a.state === 'done' || a.state === 'stuck') return a;
-  let agent = { ...a };
-  agent.progress += (speedOf(agent) * BASE_SPEED) / TICKS_PER_SEC;
-
-  // May cross more than one tile boundary in a tick at high speed; loop until progress < 1.
-  for (;;) {
-    if (!agent.next) {
-      if (!agent.path.length) {
-        agent = arrive(world, agent, s);
-        agent.progress = 0;
-        return agent;
-      }
-      const [nxt, ...rest] = agent.path;
-      if (!canStep(world, agent.pos, nxt, widthOf(agent))) {
-        return { ...agent, progress: 0, state: 'stuck', stuckReason: 'too-narrow', dir: [nxt[0] - agent.pos[0], nxt[1] - agent.pos[1]] };
-      }
-      agent.next = nxt;
-      agent.path = rest;
-      agent.dir = [nxt[0] - agent.pos[0], nxt[1] - agent.pos[1]];
-    }
-    if (agent.progress < 1) return agent;
-    agent.progress -= 1;
-    agent.pos = agent.next;
-    agent.next = null;
+function othersAt(occ: Occupancy, tiles: Tile[], self: string, ignore?: string): string | undefined {
+  for (const [x, y] of tiles) {
+    const who = occ.get(key(x, y));
+    if (who && who !== self && who !== ignore) return who;
   }
+  return undefined;
+}
+
+function wait(
+  world: World,
+  a: Agent,
+  s: SimState,
+  occ: Occupancy,
+  before: Map<string, Agent>,
+  reason: WaitReason,
+  blocker: string | undefined,
+  target: Tile,
+) {
+  a.state = 'waiting';
+  a.waitTicks++;
+  a.waitReason = reason;
+  a.blocker = blocker;
+  s.heat[a.pos[1] * world.grid.w + a.pos[0]]++;
+  if (a.waitTicks >= STUCK_TICKS) {
+    a.state = 'stuck';
+    a.stuckReason = 'jam';
+  }
+
+  // When two people block each other, only one of them detours; if both did, they'd mirror each other forever.
+  const other = blocker ? before.get(blocker) : undefined;
+  const holdsGround = other?.blocker === a.id && idNum(a) < idNum(other);
+
+  if (a.waitTicks % REPATH_TICKS === 0 && !holdsGround) {
+    // Try a route around everyone currently standing still in the way.
+    const avoid = new Set([...occ].filter(([, id]) => id !== a.id).map(([k]) => k));
+    const detour = findPath(world, a.pos, a.goal, widthOf(a), avoid);
+    if (detour) a.path = detour;
+  }
+
+  if (a.waitTicks >= SIDESTEP_TICKS && a.waitTicks % 20 === 0 && !holdsGround) {
+    // Step aside to break a stand-off: first free neighbour, in a seeded order.
+    const [r, next] = rand(s.rng);
+    s.rng = next;
+    const start = Math.floor(r * 4);
+    for (let i = 0; i < 4; i++) {
+      const [dx, dy] = DIRS[(start + i) % 4];
+      const n: Tile = [a.pos[0] + dx, a.pos[1] + dy];
+      if (same(n, target) || !canStep(world, a.pos, n, widthOf(a))) continue;
+      const fp = footprint(world, n, widthOf(a));
+      if (othersAt(occ, fp, a.id)) continue;
+      for (const [x, y] of fp) occ.set(key(x, y), a.id);
+      a.next = n;
+      a.dir = [dx, dy];
+      a.path = []; // re-plan from the new spot on arrival
+      a.state = 'walking';
+      return;
+    }
+  }
+}
+
+/** Claim the next path tile if it's free. Returns false if the agent has to wait or is stuck. Mutates `a` and `occ`. */
+function tryTake(world: World, a: Agent, s: SimState, occ: Occupancy, before: Map<string, Agent>): boolean {
+  const nxt = a.path[0];
+  const dir: Tile = [nxt[0] - a.pos[0], nxt[1] - a.pos[1]];
+  if (!canStep(world, a.pos, nxt, widthOf(a))) {
+    // Only possible for a wide carrier on its fallback route: the gap ahead is too narrow.
+    Object.assign(a, { state: 'stuck', stuckReason: 'too-narrow', dir, progress: 0 });
+    return false;
+  }
+  const fp = footprint(world, nxt, widthOf(a));
+  // A long head-on stand-off ends with both squeezing past each other.
+  const other = a.blocker ? before.get(a.blocker) : undefined;
+  const squeeze =
+    other && other.blocker === a.id && a.waitTicks >= SQUEEZE_TICKS && other.waitTicks >= SQUEEZE_TICKS ? other.id : undefined;
+  const blocker = othersAt(occ, fp, a.id, squeeze);
+  if (blocker) {
+    wait(world, a, s, occ, before, 'occupied', blocker, nxt);
+    return false;
+  }
+  // A hinged door only opens if nobody else stands in its swing.
+  const sweep = world.swing.get(key(nxt[0], nxt[1]));
+  if (sweep) {
+    const inSwing = othersAt(occ, [sweep], a.id);
+    if (inSwing) {
+      wait(world, a, s, occ, before, 'swing', inSwing, nxt);
+      return false;
+    }
+  }
+  for (const [x, y] of fp) occ.set(key(x, y), a.id);
+  a.path = a.path.slice(1);
+  a.next = nxt;
+  a.dir = dir;
+  a.state = 'walking';
+  a.waitTicks = 0;
+  a.waitReason = undefined;
+  a.blocker = undefined;
+  a.stuckReason = undefined;
+  return true;
+}
+
+function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Map<string, Agent>): Agent {
+  if (prev.state === 'done') return prev;
+  if (prev.state === 'stuck' && prev.stuckReason !== 'jam') return prev;
+  let a: Agent = { ...prev };
+
+  if (!a.next) {
+    if (!a.path.length) {
+      if (reached(a)) return arrive(world, { ...a, progress: 0 }, s);
+      a = plan(world, a); // after a sidestep
+      if (a.state === 'stuck') return a;
+    }
+    if (!tryTake(world, a, s, occ, before)) return a;
+  }
+
+  a.progress += (speedOf(a) * BASE_SPEED) / TICKS_PER_SEC;
+  // May cross more than one tile in a tick; keep claiming tiles until progress < 1.
+  while (a.progress >= 1 && a.next) {
+    a.progress -= 1;
+    a.pos = a.next;
+    a.next = null;
+    if (reached(a)) return arrive(world, { ...a, progress: 0 }, s);
+    if (!a.path.length) {
+      a.progress = 0;
+      return a;
+    }
+    if (!tryTake(world, a, s, occ, before)) {
+      a.progress = 0;
+      return a;
+    }
+  }
+  return a;
 }
 
 /** Advance one tick. Pure: returns a new state. */
 export function step(level: Level, world: World, prev: SimState): SimState {
   if (prev.finished || prev.timeUp) return prev;
-  const s: SimState = { ...prev, tick: prev.tick + 1, pending: [...prev.pending], agents: [...prev.agents] };
+  const s: SimState = { ...prev, tick: prev.tick + 1, pending: [...prev.pending], agents: [...prev.agents], heat: [...prev.heat] };
+  const occ = occupancy(world, s.agents);
 
+  // Spawn whoever is due, unless someone is standing on their start tile (then they wait their turn).
   while (s.pending.length && s.pending[0].tick <= s.tick) {
-    const sp = s.pending.shift()!;
+    const sp = s.pending[0];
     let home: Tile;
     let goal: Tile;
-    [home, s.rng] = pickServiceTile(level, world, sp.from, s.rng);
-    [goal, s.rng] = pickServiceTile(level, world, sp.to, s.rng);
-    const agent: Agent = {
+    let rng = s.rng;
+    [home, rng] = pickServiceTile(level, world, sp.from, rng);
+    [goal, rng] = pickServiceTile(level, world, sp.to, rng);
+    const dir: Tile = [goal[0] > home[0] ? 1 : -1, 0];
+    const width = sp.type === 'crate' ? 2 : 1;
+    const fp = footprint(world, home, width);
+    if (fp.some(([x, y]) => occ.has(key(x, y)))) break;
+    s.pending.shift();
+    s.rng = rng;
+    const agent = plan(world, {
       id: `p${s.nextId++}`,
       type: sp.type,
       carrying: sp.type === 'crate' || sp.type === 'tray',
@@ -126,12 +288,14 @@ export function step(level: Level, world: World, prev: SimState): SimState {
       phase: 'deliver',
       state: 'walking',
       waitTicks: 0,
-      dir: [goal[0] > home[0] ? 1 : -1, 0],
-    };
-    s.agents.push(plan(world, agent));
+      dir,
+    });
+    for (const [x, y] of fp) occ.set(key(x, y), agent.id);
+    s.agents.push(agent);
   }
 
-  s.agents = s.agents.map((a) => move(world, a, s));
+  const before = new Map(s.agents.map((a) => [a.id, a]));
+  s.agents = s.agents.map((a) => move(world, a, s, occ, before));
 
   s.finished = !s.pending.length && s.agents.every((a) => a.state === 'done');
   s.timeUp = level.timeLimitSec > 0 && s.tick >= level.timeLimitSec * TICKS_PER_SEC && !s.finished;
@@ -145,4 +309,3 @@ export function runToEnd(level: Level, design: Design, seed = 1, maxTicks = 5000
   while (!s.finished && !s.timeUp && s.tick < maxTicks) s = step(level, world, s);
   return s;
 }
-

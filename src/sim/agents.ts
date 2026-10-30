@@ -10,7 +10,10 @@ export const AGENT_INFO: Record<AgentType, { width: 1 | 2; speed: number; label:
 export type AgentState = 'walking' | 'waiting' | 'stuck' | 'done';
 /** deliver: carrying the load to the goal. return: walking home empty-handed. */
 export type Phase = 'deliver' | 'return';
-export type StuckReason = 'no-path' | 'too-narrow';
+/** no-path and too-narrow are final; jam means waited too long but still trying. */
+export type StuckReason = 'no-path' | 'too-narrow' | 'jam';
+/** occupied: someone is standing where I need to go. swing: a door can't open because someone is in its swing. */
+export type WaitReason = 'occupied' | 'swing';
 
 export type Agent = {
   id: string;
@@ -26,6 +29,9 @@ export type Agent = {
   phase: Phase;
   state: AgentState;
   waitTicks: number;
+  waitReason?: WaitReason;
+  /** Who is in the way (agent id), while waiting. */
+  blocker?: string;
   stuckReason?: StuckReason;
   /** Last movement direction, for facing. */
   dir: Tile;

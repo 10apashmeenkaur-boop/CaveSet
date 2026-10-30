@@ -9,6 +9,8 @@ export type World = {
   doors: Map<string, Orient>;
   /** Hinged door tile → the floor tile its leaf sweeps. The door only opens while that tile is empty. */
   swing: Map<string, Tile>;
+  /** Door tile → every tile of that door. A crate carrier fills the whole doorway while passing. */
+  doorTiles: Map<string, Tile[]>;
 };
 
 /** Walking through people eating is allowed but people avoid it: each dining tile costs this much. */
@@ -19,16 +21,18 @@ export const key = (x: number, y: number) => `${x},${y}`;
 export function makeWorld(level: Level, design: Design): World {
   const doors = new Map<string, Orient>();
   const swing = new Map<string, Tile>();
+  const doorTiles = new Map<string, Tile[]>();
   for (const it of design.items) {
     if (it.tool === 'wall') continue;
     const tiles = itemTiles(it);
     const sweeps = swingTiles(it);
     tiles.forEach(([x, y], i) => {
       doors.set(key(x, y), it.orient);
+      doorTiles.set(key(x, y), tiles);
       if (sweeps[i]) swing.set(key(x, y), sweeps[i]);
     });
   }
-  return { grid: buildGrid(level, design), doors, swing };
+  return { grid: buildGrid(level, design), doors, swing, doorTiles };
 }
 
 export function walkable(world: World, x: number, y: number): boolean {
