@@ -14,7 +14,7 @@ Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 pro
 - No login. Progress (stars, unlocked principles) saved in localStorage, wrapped in try/catch.
 - Characters: generic cartoon bobble-heads (rounded torso, big head, dot eyes, small legs and feet), gentle bob (not bouncy balls). Shirt color = role. No cultural attire.
 - Screens: Level select, Game view, Design Journal. (No title menu, no separate brief screen — brief lives in the game HUD.)
-- Look: soft pastel cartoon world + UI style A "Blueprint Studio" (chosen from `mockups/`): grid-paper panels, navy ink, Caveat handwritten headings/bubbles/quotes, Inter body, IBM Plex Mono labels and prices, 10px corners, offset hard shadows, coral `--alert` for incidents, pale-yellow active state. Tokens live in `:root` in `src/styles.css`.
+- Look: soft pastel cartoon world + blueprint-style UI panels (grid-paper, navy ink, handwritten accents).
 - All text is formal English everywhere (bubbles, quotes, hints, incident cards, notebook, briefs). No Hindi/Hinglish; people are "volunteers" and "visitors". "Langar" stays only in proper names (level 3 title).
 - Complaint quotes (`src/ui/quotes.ts`): short (<8 words), plain, polite. Each belongs to a failure code; speech bubbles reuse them. Shown on the journal page and as the in-level card fallback. Level select has no quote banner.
 - Dining hall is a soft no-walk: walkable at extra A* cost (DINING_COST), never hard-blocked. Stepping in raises DINING_DISTURBED and diners complain ("Excuse me, we are eating.").
