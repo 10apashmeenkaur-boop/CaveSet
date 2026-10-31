@@ -30,7 +30,7 @@ Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 pro
 - Playback: 1x plays the sim at half rate (`PLAYBACK_RATE` in Agents.tsx) to match the original pace; sim constants and timings unchanged. Placement drop is tiny (0.15, 0.16 s).
 - Sound: the "Soft wood" set, always on at a fixed low volume (no toggle, slider or any sound UI). Soft: sine tones, smooth attack/release, low pitch, short. No crowd murmur, no slow-mo, no evening lighting. Items drop in with a bounce.
 - Onboarding: only a soft pulsing outline on buildable walls. No route arrows, hint bubbles or route label pills.
-- Every zone has a painted signboard on the wall behind its far edge (or on a post if there's none), always facing the camera. Speech bubbles are only for what people say, never place names.
+- Every zone has a painted signboard at its back (camera-far) or outer edge, never on its floor: on the wall behind its far edge, else on a post just outside the far edge (site boundary) or the outer left edge. The board always faces the camera. Speech bubbles are only for what people say, never place names.
 - Eraser: one click (or right-click, or drag) on any tile of an object removes the whole object: door + its sign, its swing area, a station + its standing spot, a rail. Hover shows everything that will go in red.
 - Stars (ROADMAP 8.2 with a per-level `starCost`): 1 = pass, 2 = also within `targetSec`, 3 = also cost ≤ `starCost`. L1 starCost ₹7,500; L2 ₹9,500 (cheapest clean design is ₹9,000).
 - Each level has a fixed `seed` in its JSON, so the same design always gives the same result.

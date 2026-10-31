@@ -72,14 +72,26 @@ function GridLines({ w, h }: { w: number; h: number }) {
 }
 
 const SIGN_POST_H = 1.25;
+/** A sign post stands this far (tiles) outside the zone's edge, so it is never on floor people walk on. */
+const POST_OUT = 0.62;
 
-/** Where a zone's sign goes: on the wall right behind the zone's far edge (nearest its middle), else on a little post there. */
-function signSpot(z: Zone, isWall: (x: number, y: number) => boolean): { tile: [number, number]; onWall: boolean } {
+/**
+ * Where a zone's sign goes, always at the zone's back (camera-far) or outer edge, never on its floor:
+ * on the wall right behind its far edge (nearest the middle); else on a post just past that edge if it is the
+ * site boundary; else on a post just past its left edge if that is a wall or the boundary; else just past the far edge.
+ * Returns a (fractional) tile position.
+ */
+function signSpot(z: Zone, isWall: (x: number, y: number) => boolean): { at: [number, number]; onWall: boolean } {
   const mid = z.x + Math.floor((z.w - 1) / 2);
   const along = Array.from({ length: z.w }, (_, i) => z.x + i).sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid));
   const top = along.find((x) => isWall(x, z.y - 1));
-  if (top !== undefined) return { tile: [top, z.y - 1], onWall: true };
-  return { tile: [mid, z.y], onWall: false };
+  if (top !== undefined) return { at: [top, z.y - 1], onWall: true };
+  const back: { at: [number, number]; onWall: boolean } = { at: [mid, z.y - POST_OUT], onWall: false };
+  if (z.y === 0) return back;
+  const midY = z.y + Math.floor((z.h - 1) / 2);
+  const leftOuter = z.x === 0 || Array.from({ length: z.h }, (_, i) => z.y + i).every((y) => isWall(z.x - 1, y));
+  if (leftOuter) return { at: [z.x - POST_OUT, midY], onWall: false };
+  return back;
 }
 
 /** A painted signboard for every zone: on the nearest wall (or a post), always facing the camera and drawn over people. */
@@ -91,8 +103,8 @@ export function Signboards({ level }: { level: Level }) {
   }, [level]);
   return (
     <group>
-      {spots.map(({ name, tile, onWall }) => {
-        const [wx, , wz] = tileToWorld(level, ...tile);
+      {spots.map(({ name, at, onWall }) => {
+        const [wx, , wz] = tileToWorld(level, ...at);
         const top = onWall ? WALL_H : SIGN_POST_H;
         // A raised zone's sign stands on its deck.
         const base = name === level.rise?.zone ? level.rise.heightM / TILE_M : 0;
