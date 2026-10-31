@@ -89,6 +89,10 @@ export type Level = {
   stations?: FixedStation[];
   queue?: QueueRules;
   rise?: RiseRules;
+  /** The Utensil Rack: how many of each utensil go in the rack, wet. */
+  rack?: { plates: number; bowls: number; spoons: number };
+  /** Level-select section; levels without one are Stage 1. */
+  section?: 'objects';
   /** Sim bar progress text, e.g. "🍽 {n}/{total} seated". Default "📦 {n}/{total} delivered". */
   goalLabel?: string;
   /** Mistri Ji: a one-line brief, and nudges keyed by failure code (plus "default") after repeated failed runs. */

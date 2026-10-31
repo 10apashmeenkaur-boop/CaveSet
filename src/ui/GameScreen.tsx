@@ -6,6 +6,7 @@ import { BudgetBar } from './BudgetBar';
 import { MistriCard } from './QuoteBanner';
 import { ResultsPanel } from './ResultsPanel';
 import { SimBar } from './SimBar';
+import { RackToolbar } from './RackToolbar';
 import { Toolbar } from './Toolbar';
 
 export function GameScreen() {
@@ -54,7 +55,7 @@ export function GameScreen() {
 
       {mode === 'design' ? (
         <>
-          <Toolbar level={level} />
+          {level.rack ? <RackToolbar /> : <Toolbar level={level} />}
           <div className="hud bottom-right">
             <SimBar level={level} />
           </div>

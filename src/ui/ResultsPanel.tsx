@@ -45,6 +45,7 @@ export function ResultsPanel({ level }: { level: Level }) {
               </div>
             </li>
           ))}
+          {!level.rack && (
           <li className="info">
             <span className="mark">💬</span>
             <div>
@@ -54,6 +55,7 @@ export function ResultsPanel({ level }: { level: Level }) {
               </span>
             </div>
           </li>
+          )}
         </ul>
       )}
 

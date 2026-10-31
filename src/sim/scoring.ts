@@ -1,5 +1,5 @@
 import type { IncidentCode } from './failures';
-import { TICKS_PER_SEC } from './constants';
+import { RACK_SEC_PER_TICK, TICKS_PER_SEC } from './constants';
 import type { SimState } from './simulate';
 import type { Level } from './types';
 
@@ -17,6 +17,12 @@ const FAILS: IncidentCode[] = [
   'NO_HANDRAIL',
   'TIGHT_TURN',
   'NO_ACCESSIBLE_ROUTE',
+  'WATER_POOLING',
+  'STILL_WET',
+  'COUNTER_WET',
+  'FELL_THROUGH',
+  'RUSTED',
+  'FRAME_SAG',
 ];
 /** Incidents people grumble about: shown as complaints, they don't cost the pass. */
 const COMPLAINTS: IncidentCode[] = ['HEAD_ON_JAM', 'SWING_BLOCK'];
@@ -41,8 +47,13 @@ export function starCost(level: Level): number {
   return level.starCost ?? level.budget;
 }
 
+/** Seconds of game time after `tick` ticks. On the rack level one tick is several game seconds. */
+export function gameSeconds(level: Level, tick: number): number {
+  return level.rack ? tick * RACK_SEC_PER_TICK : tick / TICKS_PER_SEC;
+}
+
 export function score(level: Level, sim: SimState, cost: number): Score {
-  const timeSec = sim.tick / TICKS_PER_SEC;
+  const timeSec = gameSeconds(level, sim.tick);
   const codes = sim.incidents.map((i) => i.code);
   const failCodes = FAILS.filter((c) => codes.includes(c));
   const underBudget = cost <= level.budget;
@@ -58,7 +69,11 @@ export function score(level: Level, sim: SimState, cost: number): Score {
     {
       label: 'Function',
       ok: passed,
-      detail: level.rise
+      detail: level.rack
+        ? passed
+          ? `All ${sim.totalTasks} utensils dry, nothing lost, nothing spilled.`
+          : `${sim.delivered} of ${sim.totalTasks} utensils dry.`
+        : level.rise
         ? passed
           ? `All ${sim.totalTasks} up on the roof, wheels and all.`
           : `${sim.delivered} of ${sim.totalTasks} got up to the roof.`
@@ -73,7 +88,11 @@ export function score(level: Level, sim: SimState, cost: number): Score {
     {
       label: 'Time',
       ok: quick,
-      detail: timed ? `${timeSec.toFixed(1)}s (target ${targetSec(level)}s, limit ${level.timeLimitSec}s)` : `${timeSec.toFixed(1)}s`,
+      detail: level.rack
+        ? `Dry in ${Math.ceil(timeSec / 60)} min (target ${targetSec(level) / 60} min, limit ${level.timeLimitSec / 60} min)`
+        : timed
+          ? `${timeSec.toFixed(1)}s (target ${targetSec(level)}s, limit ${level.timeLimitSec}s)`
+          : `${timeSec.toFixed(1)}s`,
     },
     {
       label: 'Cost',

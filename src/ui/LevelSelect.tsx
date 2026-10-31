@@ -1,6 +1,8 @@
 import { LEVELS, SANDBOX } from '../levels';
 import { useStore } from '../store';
 import { useEffect } from 'react';
+import type { Level } from '../sim/types';
+import { levelLabel } from './Journal';
 
 function Stars({ n }: { n: number }) {
   return (
@@ -10,8 +12,28 @@ function Stars({ n }: { n: number }) {
   );
 }
 
+const STAGE_1 = LEVELS.filter((l) => !l.section);
+const OBJECTS = LEVELS.filter((l) => l.section === 'objects');
+
+/** One level card: a stage level unlocks once the previous one has at least one star. */
+function LevelCard({ lvl, label, locked, stars }: { lvl: Level; label: string; locked: boolean; stars: number }) {
+  const openLevel = useStore((s) => s.openLevel);
+  return (
+    <button className="card blueprint" disabled={locked} onClick={() => openLevel(lvl.id)}>
+      <span className="card-num">{label}</span>
+      <h3>{lvl.title}</h3>
+      <p>{lvl.brief}</p>
+      <footer>
+        <span className="pill">Budget ₹{lvl.budget.toLocaleString('en-IN')}</span>
+        {locked ? <span className="lock">🔒 Finish the previous level</span> : <Stars n={stars} />}
+      </footer>
+    </button>
+  );
+}
+
 export function LevelSelect() {
   const { progress, openLevel, goTo, setProgress } = useStore();
+  const devOpen = import.meta.env.DEV && !!progress.devUnlock;
 
   // Dev builds only: U unlocks (or relocks) every level, for testing without replaying.
   useEffect(() => {
@@ -37,21 +59,9 @@ export function LevelSelect() {
 
       <h2 className="section-title">Stage 1 · The Dining Hall Service Path</h2>
       <div className="cards">
-        {LEVELS.map((lvl, i) => {
-          // A level unlocks once the previous one has at least one star.
-          const locked = i > 0 && !progress.stars[LEVELS[i - 1].id] && !(import.meta.env.DEV && progress.devUnlock);
-          return (
-            <button key={lvl.id} className="card blueprint" disabled={locked} onClick={() => openLevel(lvl.id)}>
-              <span className="card-num">Level {i + 1}</span>
-              <h3>{lvl.title}</h3>
-              <p>{lvl.brief}</p>
-              <footer>
-                <span className="pill">Budget ₹{lvl.budget.toLocaleString('en-IN')}</span>
-                {locked ? <span className="lock">🔒 Finish the previous level</span> : <Stars n={progress.stars[lvl.id] ?? 0} />}
-              </footer>
-            </button>
-          );
-        })}
+        {STAGE_1.map((lvl, i) => (
+          <LevelCard key={lvl.id} lvl={lvl} label={levelLabel(lvl)} locked={i > 0 && !progress.stars[STAGE_1[i - 1].id] && !devOpen} stars={progress.stars[lvl.id] ?? 0} />
+        ))}
         <button className="card blueprint sandbox" onClick={() => openLevel(SANDBOX.id)}>
           <span className="card-num">Free build</span>
           <h3>{SANDBOX.title}</h3>
@@ -60,6 +70,14 @@ export function LevelSelect() {
             <span className="pill">No budget</span>
           </footer>
         </button>
+      </div>
+
+      <h2 className="section-title">Objects</h2>
+      <div className="cards">
+        {OBJECTS.map((lvl, i) => (
+          // The first object is open from the start; each one after needs a star on the one before.
+          <LevelCard key={lvl.id} lvl={lvl} label={levelLabel(lvl)} locked={i > 0 && !progress.stars[OBJECTS[i - 1].id] && !devOpen} stars={progress.stars[lvl.id] ?? 0} />
+        ))}
       </div>
     </div>
   );

@@ -22,6 +22,7 @@ import {
 import { makeWorld, type World } from './sim/pathfinding';
 import { EMPTY_PROGRESS, recordRun, type Progress } from './sim/progress';
 import { RAMP_SLOPES } from './sim/constants';
+import { DEFAULT_RACK, type RackDesign } from './sim/rack';
 import { score } from './sim/scoring';
 import { initSim, step, type SimState } from './sim/simulate';
 import type { Level, Tile, ToolId } from './sim/types';
@@ -48,6 +49,11 @@ function saveProgress(p: Progress) {
   } catch {
     // Storage unavailable (private mode etc.) — progress just won't persist.
   }
+}
+
+/** A level starts empty; the Utensil Rack starts as the plainest rack. */
+function startDesign(levelId: string | null): Design {
+  return levelId && findLevel(levelId)?.rack ? { ...EMPTY_DESIGN, rack: DEFAULT_RACK } : EMPTY_DESIGN;
 }
 
 /** R cycles through these: flip swing side, then rotate. */
@@ -84,6 +90,8 @@ type Store = {
   placeAt: (x: number, y: number) => void;
   eraseAt: (x: number, y: number) => void;
   clearDesign: () => void;
+  /** Utensil Rack level: change part of the rack. */
+  setRack: (change: Partial<RackDesign>) => void;
 
   // Simulation
   mode: 'design' | 'sim';
@@ -129,7 +137,7 @@ export const useStore = create<Store>((set, get) => ({
     set({
       screen: 'game',
       levelId: id,
-      design: EMPTY_DESIGN,
+      design: startDesign(id),
       tool: findLevel(id)?.allowedTools[0] ?? 'wall',
       orientIdx: 0,
       slopeIdx: 0,
@@ -183,7 +191,8 @@ export const useStore = create<Store>((set, get) => ({
     set({ design: place(level, design, r.draft), notice: null });
   },
   eraseAt: (x, y) => set((s) => ({ design: eraseAt(s.design, x, y), notice: null })),
-  clearDesign: () => set({ design: EMPTY_DESIGN, notice: null }),
+  clearDesign: () => set((s) => ({ design: startDesign(s.levelId), notice: null })),
+  setRack: (change) => set((s) => (s.design.rack ? { design: { ...s.design, rack: { ...s.design.rack, ...change } }, notice: null } : {})),
 
   mode: 'design',
   sim: null,

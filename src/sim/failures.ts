@@ -18,7 +18,13 @@ export type IncidentCode =
   | 'TROLLEY_ROLLBACK'
   | 'NO_HANDRAIL'
   | 'TIGHT_TURN'
-  | 'NO_ACCESSIBLE_ROUTE';
+  | 'NO_ACCESSIBLE_ROUTE'
+  | 'WATER_POOLING'
+  | 'STILL_WET'
+  | 'COUNTER_WET'
+  | 'FELL_THROUGH'
+  | 'RUSTED'
+  | 'FRAME_SAG';
 
 /** The "why it went wrong" card. */
 export type Incident = {
@@ -116,6 +122,36 @@ export const PRINCIPLES: Record<IncidentCode, { title: string; principle: string
     title: 'Stairs aren’t for everyone',
     principle: 'Stairs leave out wheelchairs and trolleys. There must be a step-free way up.',
     hint: 'Build a ramp all the way up, from the ground to the roof.',
+  },
+  WATER_POOLING: {
+    title: 'Water must have somewhere to go',
+    principle: 'Water that cannot drain sits in puddles, and anything standing in a puddle never dries.',
+    hint: 'Look at what is under the wettest things. Can the water get away?',
+  },
+  STILL_WET: {
+    title: 'Drying is mostly evaporation',
+    principle: 'Draining removes the drips, but the last film of water only leaves by evaporating, and that needs moving air.',
+    hint: 'Look at how close together things sit, and whether air can reach them.',
+  },
+  COUNTER_WET: {
+    title: 'Catch what drains',
+    principle: 'Good drainage moves water down. Plan where it lands.',
+    hint: 'Where does the water go after it leaves the rack?',
+  },
+  FELL_THROUGH: {
+    title: 'Size openings for the smallest item',
+    principle: 'An opening big enough to drain well can be big enough for small things to fall through.',
+    hint: 'Small items need their own holder, or smaller openings.',
+  },
+  RUSTED: {
+    title: 'Wet parts need wet-proof materials',
+    principle: 'Plain steel rusts where water sits on it. Choose materials for how they will be used, a month from now.',
+    hint: 'Which of these materials stays sound when it is wet every day?',
+  },
+  FRAME_SAG: {
+    title: 'Design for the wet load',
+    principle: 'Wet things are heavier than dry ones. A thin frame that holds dry dishes can bend under wet ones.',
+    hint: 'Which material is stiff enough for a full, wet load?',
   },
 };
 

@@ -154,3 +154,50 @@ export const TURN_COST = 0.4;
 /** A trolley pushed up a too-steep ramp makes it this many tiles before it rolls back down, at this speed. */
 export const ROLLBACK_AFTER_TILES = 3;
 export const ROLLBACK_SPEED = mps(1.5);
+
+// ─── 4. The Utensil Rack (Objects) ─────────────────────────────────────────────────────
+// Game estimates, rounded from simple kitchen measurements: how much water a washed utensil carries, how much
+// clings on as a film after it has drained, and how fast a thin film evaporates indoors in moving air.
+
+/** One rack tick is this many game seconds; the run lasts the level's timeLimitSec (30 game minutes). */
+export const RACK_SEC_PER_TICK = 10;
+/** Water on a utensil straight out of the wash (mL). */
+export const RACK_WATER_ML = { plate: 15, bowl: 12, spoon: 2 } as const;
+/** Water that clings on as a film once the rest has run off (mL), by how the utensil sits. */
+export const RACK_FILM_ML = { divider: 2.5, stack: 8, bowl: 1.5, cup: 0.6, base: 0.6 } as const;
+/** Share of the not-yet-drained water that runs off per minute: upright plates shed water fast, stacked plates barely. */
+export const RACK_DRAIN_PER_MIN = { divider: 1.5, stack: 0.15, bowl: 0.8, cup: 1, base: 0.5 } as const;
+/** A utensil counts as dry below this much water (mL). */
+export const RACK_DRY_ML = 0.3;
+/** Evaporation of a thin film in good airflow (mL per minute). Most of the drying is this, not draining. */
+export const RACK_EVAP_ML_PER_MIN = 0.13;
+/** Open area of the base (share of its surface), by base and opening size in mm. A solid tray has none. */
+export const RACK_OPEN_AREA: Record<'tray' | 'perforated' | 'mesh', Record<number, number>> = {
+  tray: { 5: 0, 10: 0, 20: 0, 35: 0 },
+  perforated: { 5: 0.2, 10: 0.3, 20: 0.4, 35: 0.5 },
+  mesh: { 5: 0.5, 10: 0.6, 20: 0.75, 35: 0.85 },
+};
+/** Share of the water reaching the base that runs straight through. Water bridges holes of ~5 mm (surface tension). */
+export const RACK_PASS_THROUGH: Record<'tray' | 'perforated' | 'mesh', Record<number, number>> = {
+  tray: { 5: 0, 10: 0, 20: 0, 35: 0 },
+  perforated: { 5: 0.3, 10: 0.9, 20: 1, 35: 1 },
+  mesh: { 5: 0.8, 10: 1, 20: 1, 35: 1 },
+};
+/** How freely air moves between upright plates, by the gap between them (mm). Touching plates barely dry. */
+export const RACK_PLATE_SPACING: Record<number, number> = { 5: 0.2, 10: 0.45, 20: 0.8, 35: 1 };
+/** Spoons slip through openings this wide or wider (a dessert spoon's handle is ~12-18 mm). */
+export const RACK_SPOON_FALL_MM = 20;
+/** Standing water deeper than this keeps whatever sits in it wet (mL). */
+export const RACK_POOL_WETS_ML = 20;
+/** The bottom of a cutlery cup is small: this much water there already keeps the spoons wet (mL). */
+export const RACK_CUP_POOL_WETS_ML = 2;
+/** Incidents: water pooled on the base (or in the cutlery cup), and water on the counter (mL). */
+export const RACK_POOL_INCIDENT_ML = 30;
+export const RACK_CUP_POOL_INCIDENT_ML = 5;
+export const RACK_COUNTER_INCIDENT_ML = 20;
+/** Standing water evaporates slowly (mL per minute, across the whole pool). */
+export const RACK_POOL_EVAP_ML_PER_MIN = 0.5;
+export const RACK_CUP_POOL_EVAP_ML_PER_MIN = 0.05;
+/** Dry weights (g) and what a thin aluminium frame can carry before it bends (g). */
+export const RACK_WEIGHT_G = { plate: 180, bowl: 120, spoon: 25 } as const;
+export const RACK_ALUMINIUM_LIMIT_G = 3500;

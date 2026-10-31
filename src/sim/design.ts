@@ -1,5 +1,6 @@
 import { DOUBLE_DOOR_TILES, LANDING_TILES, PERSON_TILES, RAMP_WIDTH_TILES, SINGLE_DOOR_TILES, STAIR_TILES } from './constants';
 import { getCell, gridFromLevel, idx, inBounds, zoneAt, type Grid } from './grid';
+import { rackCost, type RackDesign } from './rack';
 import type { Level, StationKind, Tile, ToolId } from './types';
 
 export type BuildTool = Exclude<ToolId, 'eraser'>;
@@ -13,7 +14,8 @@ export type Side = 1 | -1;
 
 /** slope: a ramp's steepness as 1:n. */
 export type Placed = { id: number; tool: BuildTool; x: number; y: number; orient: Orient; swing: Side; slope?: number };
-export type Design = { items: Placed[]; nextId: number };
+/** rack: the choices made on the Utensil Rack level (it has no placed items). */
+export type Design = { items: Placed[]; nextId: number; rack?: RackDesign };
 export type Draft = Omit<Placed, 'id'>;
 
 export const EMPTY_DESIGN: Design = { items: [], nextId: 1 };
@@ -108,7 +110,7 @@ export function swingTiles(item: Draft): Tile[] {
 }
 
 export function costOf(design: Design): number {
-  return design.items.reduce((sum, it) => sum + TOOL_INFO[it.tool].cost, 0);
+  return design.items.reduce((sum, it) => sum + TOOL_INFO[it.tool].cost, 0) + (design.rack ? rackCost(design.rack) : 0);
 }
 
 /** Level's `editableTiles` rule: "all" or "wall-x-N-only". */

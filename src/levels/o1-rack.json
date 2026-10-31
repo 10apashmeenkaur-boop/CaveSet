@@ -1,0 +1,39 @@
+{
+  "id": "o1-rack",
+  "title": "The Utensil Rack",
+  "section": "objects",
+  "brief": "40 wet utensils (20 plates, 10 bowls, 10 spoons) must be dry within 30 minutes. Choose the rack's base, gap, material and extras. Budget ₹2,000.",
+  "goalLabel": "🍽 Dry {n}/{total}",
+  "mistri": {
+    "brief": "Forty wet utensils and half an hour. Build a rack they can dry in.",
+    "hints": {
+      "WATER_POOLING": "Look under the wettest dishes. Where can the water go?",
+      "STILL_WET": "Draining is not drying. What else does a wet plate need?",
+      "COUNTER_WET": "The water left the rack. Where did it land?",
+      "FELL_THROUGH": "Count the spoons before and after.",
+      "RUSTED": "Think a month ahead, not just today.",
+      "FRAME_SAG": "Wet dishes weigh more than dry ones.",
+      "default": "Watch which dishes stay wet longest, and ask why."
+    }
+  },
+  "insight": {
+    "title": "Drying is mostly evaporation, so airflow matters as much as drainage.",
+    "principle": "Draining only removes the drips. The last thin film of water leaves by evaporating, and that needs air moving past every surface. Space things apart, let air in from below, and give small items a holder that drains.",
+    "example": "Commercial dish racks hold plates upright and well apart over an open base, and cutlery goes handle-down in a perforated basket.",
+    "number": "A drained plate still holds about 2-3 mL of water; in still air between touching plates it can take well over half an hour to evaporate.",
+    "quote": "Water runs off in a minute. It dries off in twenty, if the air can reach it."
+  },
+  "rack": { "plates": 20, "bowls": 10, "spoons": 10 },
+  "grid": { "w": 12, "h": 8 },
+  "fixedWalls": [],
+  "editableTiles": "none",
+  "zones": {},
+  "noWalk": [],
+  "spawns": [],
+  "budget": 2000,
+  "timeLimitSec": 1800,
+  "targetSec": 1500,
+  "starCost": 1100,
+  "seed": 1,
+  "allowedTools": []
+}

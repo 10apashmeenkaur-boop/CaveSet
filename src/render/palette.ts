@@ -59,6 +59,21 @@ export const COLORS = {
   chair: '#4f6d8f',
   wheel: '#33363d',
   cart: '#7b8794',
+  /** The Utensil Rack. */
+  rackPlastic: '#6fa8c8',
+  rackAluminium: '#d3d7dc',
+  rackStainless: '#a9b2bc',
+  rackMildSteel: '#55595f',
+  rust: '#a5532c',
+  water: '#5fb0e6',
+  wetTint: '#8cc3ea',
+  plate: '#f4f1ea',
+  bowl: '#e9d8b8',
+  spoon: '#c4cad1',
+  cup: '#8fa7b5',
+  dripTray: '#b7c0c8',
+  benchTop: '#d8cfc0',
+  benchWall: '#f1ece2',
 };
 
 /** Shirt colour tells you what someone is doing. */

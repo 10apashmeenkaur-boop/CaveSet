@@ -2,6 +2,7 @@ import { buildGrid, doorAt, itemTiles, stationsOf, swingTiles, TOOL_INFO, type D
 import { DINING_COST, OCCUPIED_COST, RECENT_CAP, RECENT_WEIGHT, TURN_COST } from './constants';
 import { getCell, type Grid } from './grid';
 import { buildTerrain, isSlope, laneSide, terrainStep, tooSteep, type Terrain } from './terrain';
+import type { RackDesign } from './rack';
 import type { Level, StationKind, Tile } from './types';
 
 /** Level + design baked into what movement needs to know. */
@@ -21,6 +22,8 @@ export type World = {
   seats: Tile[];
   /** Heights, ramps and stairs (ramp level only). */
   terrain?: Terrain;
+  /** The rack being tested (Utensil Rack level only). */
+  rack?: RackDesign;
 };
 
 /** Hall tiles that aren't aisles and weren't built over, back first. */
@@ -74,6 +77,7 @@ export function makeWorld(level: Level, design: Design): World {
     units: stationsOf(level, design),
     seats: seatsOf(level, grid),
     terrain: buildTerrain(level, design, grid),
+    rack: design.rack,
   };
 }
 

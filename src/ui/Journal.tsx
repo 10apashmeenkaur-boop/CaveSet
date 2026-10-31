@@ -1,10 +1,17 @@
 import { LEVELS } from '../levels';
 import { PRINCIPLES, type IncidentCode } from '../sim/failures';
+import type { Level } from '../sim/types';
 import { useStore } from '../store';
 import { QuoteBanner } from './QuoteBanner';
 import { quoteFor } from './quotes';
 
 const CODES = Object.keys(PRINCIPLES) as IncidentCode[];
+
+/** "Level 3" for Stage 1 levels, "Object 1" for the objects section. */
+export function levelLabel(lvl: Level): string {
+  const same = LEVELS.filter((l) => l.section === lvl.section);
+  return `${lvl.section === 'objects' ? 'Object' : 'Level'} ${same.indexOf(lvl) + 1}`;
+}
 
 /** Design Notebook: one insight page per level (fail it, then pass it), then every principle learned from a failure. */
 export function Journal() {
@@ -30,11 +37,11 @@ export function Journal() {
       <QuoteBanner />
 
       <div className="cards">
-        {pages.map((lvl, i) => {
+        {pages.map((lvl) => {
           const page = lvl.insight!;
           return progress.insights.includes(lvl.id) ? (
             <article key={lvl.id} className="card blueprint diary-card">
-              <span className="card-num">Level {i + 1} · {lvl.title}</span>
+              <span className="card-num">{levelLabel(lvl)} · {lvl.title}</span>
               <h3>{page.title}</h3>
               <p>{page.principle}</p>
               <p className="diary-example">🌍 {page.example}</p>
@@ -43,7 +50,7 @@ export function Journal() {
             </article>
           ) : (
             <article key={lvl.id} className="card blueprint locked-card">
-              <span className="card-num">Level {i + 1} · {lvl.title}</span>
+              <span className="card-num">{levelLabel(lvl)} · {lvl.title}</span>
               <h3>Page still blank</h3>
               <p>Fail this level once, then pass it.</p>
             </article>

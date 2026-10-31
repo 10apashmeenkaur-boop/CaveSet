@@ -1,5 +1,5 @@
 import { costOf } from '../sim/design';
-import { TICKS_PER_SEC } from '../sim/constants';
+import { gameSeconds } from '../sim/scoring';
 import { goalText } from '../sim/progress';
 import type { Level } from '../sim/types';
 import { useStore } from '../store';
@@ -27,7 +27,7 @@ export function SimBar({ level }: { level: Level }) {
     );
   }
 
-  const elapsed = sim.tick / TICKS_PER_SEC;
+  const elapsed = gameSeconds(level, sim.tick);
   const stuck = sim.agents.filter((a) => a.state === 'stuck').length;
   const ended = sim.finished || sim.timeUp;
 
@@ -63,6 +63,7 @@ export function SimBar({ level }: { level: Level }) {
           {level.timeLimitSec > 0 && <span className="muted"> / {fmt(level.timeLimitSec)}</span>}
         </span>
         <span>{goalText(level, sim.delivered, sim.totalTasks)}</span>
+        {sim.rack && <span>💧 Counter: {Math.round(sim.rack.counter)} mL</span>}
         {ended && <span className={sim.finished ? 'good' : 'bad'}>{sim.finished ? '✓ Finished' : '⏰ Time’s up'}</span>}
         {stuck > 0 && <span className="bad">⚠ {stuck} stuck</span>}
       </div>

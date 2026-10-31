@@ -8,6 +8,7 @@ import {
   RAMP_MAX_SLOPE,
   ROLLBACK_AFTER_TILES,
   ROLLBACK_SPEED,
+  RACK_SEC_PER_TICK,
   RECENT_DECAY,
   REPATH_TICKS,
   SEAT_RETRY_TICKS,
@@ -38,6 +39,7 @@ import {
   type WheelRules,
   type World,
 } from './pathfinding';
+import { initRack, isDry, rackIncidents, stepRack, type RackDesign, type RackState } from './rack';
 import { rand } from './rng';
 import { isSlope, railed, slopeFactor, STAIRS, tooSteep } from './terrain';
 import type { AgentType, Level, StationKind, Tile, Zone } from './types';
@@ -66,6 +68,8 @@ export type SimState = {
   seatTaken: (string | null)[];
   loads: number[];
   peak: Partial<Record<StationKind, number>>;
+  /** The Utensil Rack: the water on every utensil, in the rack and below it. (`delivered` = utensils dry.) */
+  rack?: RackState;
 };
 
 /** Tile key → id of the agent standing on or walking into it. */
@@ -119,6 +123,28 @@ export function initSim(level: Level, seed = level.seed ?? 1, world?: World): Si
   pending.sort((a, b) => a.tick - b.tick);
   // On the ramp level everyone has to get up, the elderly visitor too.
   const totalTasks = level.spawns.filter((r) => r.type !== 'elderly' || level.rise).reduce((n, r) => n + r.count, 0);
+  if (level.rack && world?.rack) {
+    const rack = initRack(level, world.rack);
+    return {
+      tick: 0,
+      rng: seed,
+      agents: [],
+      pending: [],
+      nextId: 1,
+      delivered: 0,
+      totalTasks: rack.items.length,
+      heat: new Array(level.grid.w * level.grid.h).fill(0),
+      recent: new Array(level.grid.w * level.grid.h).fill(0),
+      incidents: [],
+      disturbances: [],
+      finished: false,
+      timeUp: false,
+      seatTaken: [],
+      loads: [],
+      peak: {},
+      rack,
+    };
+  }
   const seatTaken: (string | null)[] = world ? world.seats.map(() => null) : [];
   const agents = world ? seatPangat(level, world, seatTaken) : [];
   return {
@@ -637,6 +663,7 @@ function move(world: World, prev: Agent, s: SimState, occ: Occupancy, before: Ma
 /** Advance one tick. Pure: returns a new state. */
 export function step(level: Level, world: World, prev: SimState): SimState {
   if (prev.finished || prev.timeUp) return prev;
+  if (prev.rack && world.rack) return stepRackSim(level, world.rack, prev);
   const s: SimState = {
     ...prev,
     tick: prev.tick + 1,
@@ -763,6 +790,17 @@ export function step(level: Level, world: World, prev: SimState): SimState {
     rise: !!level.rise,
   });
   return s;
+}
+
+/** One tick of the Utensil Rack: dry a little, then check what has gone wrong. */
+function stepRackSim(level: Level, r: RackDesign, prev: SimState): SimState {
+  const tick = prev.tick + 1;
+  const rack = stepRack(r, prev.rack!, tick);
+  const delivered = rack.items.filter(isDry).length;
+  const finished = rack.items.every((u) => u.fallen || isDry(u));
+  const timeUp = !finished && tick * RACK_SEC_PER_TICK >= level.timeLimitSec;
+  const incidents = rackIncidents(prev.incidents, r, rack, tick, timeUp, finished || timeUp, level.timeLimitSec / 60);
+  return { ...prev, tick, rack, delivered, finished, timeUp, incidents };
 }
 
 /** Convenience for tests: run until finished, time up, or maxTicks. */
