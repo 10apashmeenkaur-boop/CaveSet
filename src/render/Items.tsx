@@ -57,12 +57,31 @@ export function WallBlock({ position, ghost }: { position: [number, number, numb
 }
 
 /** Translucent quarter circle on the floor showing where a hinged leaf sweeps. */
-function SwingArc({ hingeX, radius, flip, ghost }: { hingeX: number; radius: number; flip: boolean; ghost: Ghost }) {
+const SWING_ORDER = 2;
+
+function SwingArc({ hingeX, radius, flip, ghost, strong }: { hingeX: number; radius: number; flip: boolean; ghost: Ghost; strong?: boolean }) {
+  const start = flip ? Math.PI / 2 : 0;
   return (
-    <mesh position={[hingeX, 0.02, 0]} rotation={[Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[radius, 24, flip ? Math.PI / 2 : 0, Math.PI / 2]} />
-      <meshBasicMaterial color={ghost === 'bad' ? '#e5675a' : COLORS.swing} transparent opacity={0.5} side={DoubleSide} depthWrite={false} />
-    </mesh>
+    <group position={[hingeX, 0.02, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      {/* Drawn after the see-through zone floors, or they wash it out. */}
+      <mesh renderOrder={SWING_ORDER}>
+        <circleGeometry args={[radius, 24, start, Math.PI / 2]} />
+        <meshBasicMaterial
+          color={ghost === 'bad' ? '#e5675a' : strong ? COLORS.swingHover : COLORS.swing}
+          transparent
+          opacity={strong ? 0.75 : 0.5}
+          side={DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Hovered: the path the leaf's edge sweeps, outlined so it reads clearly. */}
+      {strong && (
+        <mesh position={[0, 0, -0.005]} renderOrder={SWING_ORDER + 1}>
+          <ringGeometry args={[radius - 0.06, radius, 24, 1, start, Math.PI / 2]} />
+          <meshBasicMaterial color={COLORS.swingHoverEdge} side={DoubleSide} depthWrite={false} />
+        </mesh>
+      )}
+    </group>
   );
 }
 
@@ -83,7 +102,8 @@ function Leaf({ hingeX, length, flip, ghost }: { hingeX: number; length: number;
   );
 }
 
-export function DoorItem({ level, item, ghost }: { level: Level; item: Draft; ghost?: Ghost }) {
+/** `strong`: the door is hovered in design mode, so its swing arc stands out. */
+export function DoorItem({ level, item, ghost, strong }: { level: Level; item: Draft; ghost?: Ghost; strong?: boolean }) {
   const info = TOOL_INFO[item.tool];
   const w = info.width;
   const { center, rot } = frame(level, item);
@@ -111,14 +131,14 @@ export function DoorItem({ level, item, ghost }: { level: Level; item: Draft; gh
         w === 1 ? (
           <>
             <Leaf hingeX={-0.5} length={1} flip={false} ghost={ghost} />
-            <SwingArc hingeX={-0.5} radius={1} flip={false} ghost={ghost} />
+            <SwingArc hingeX={-0.5} radius={1} flip={false} ghost={ghost} strong={strong} />
           </>
         ) : (
           <>
             <Leaf hingeX={-1} length={1} flip={false} ghost={ghost} />
             <Leaf hingeX={1} length={1} flip ghost={ghost} />
-            <SwingArc hingeX={-1} radius={1} flip={false} ghost={ghost} />
-            <SwingArc hingeX={1} radius={1} flip ghost={ghost} />
+            <SwingArc hingeX={-1} radius={1} flip={false} ghost={ghost} strong={strong} />
+            <SwingArc hingeX={1} radius={1} flip ghost={ghost} strong={strong} />
           </>
         )
       ) : (

@@ -166,7 +166,11 @@ export const useStore = create<Store>((set, get) => ({
   setTool: (tool) => set({ tool }),
   rotate: () =>
     set((s) =>
-      s.tool === 'ramp' ? { slopeIdx: (s.slopeIdx + 1) % RAMP_SLOPES.length } : { orientIdx: (s.orientIdx + 1) % ORIENTATIONS.length },
+      s.tool === 'ramp'
+        ? { slopeIdx: (s.slopeIdx + 1) % RAMP_SLOPES.length }
+        : s.tool !== 'eraser' && (TOOL_INFO[s.tool].door || TOOL_INFO[s.tool].sign)
+          ? { orientIdx: s.orientIdx ^ 1 } // doors and signs follow the wall; R just flips the side
+          : { orientIdx: (s.orientIdx + 1) % ORIENTATIONS.length },
     ),
   setHover: (hover) => set({ hover }),
   placeAt: (x, y) => {

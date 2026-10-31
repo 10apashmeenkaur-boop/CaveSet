@@ -8,7 +8,7 @@ import { tileToWorld } from './coords';
 import { COLORS } from './palette';
 import { Person } from './Person';
 
-const ZONE_NAMES: Record<string, string> = {
+export const ZONE_NAMES: Record<string, string> = {
   kitchen: 'Kitchen',
   washing: 'Washing',
   dining: 'Dining hall',

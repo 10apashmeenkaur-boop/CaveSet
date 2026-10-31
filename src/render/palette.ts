@@ -10,6 +10,9 @@ export const COLORS = {
   threshold: '#c9b79c',
   glass: '#bfe3f2',
   swing: '#ff8a2a',
+  /** A hovered hinged door's swing area and its edge. */
+  swingHover: '#ffd166',
+  swingHoverEdge: '#e76f51',
   hover: '#23395b',
   editable: '#ffd166',
   editableEdge: '#ff9f1c',

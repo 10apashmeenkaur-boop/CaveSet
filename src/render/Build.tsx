@@ -16,6 +16,12 @@ import { surfaceY, TerrainGhost, terrainOf } from './Terrain';
 export function DesignLayer({ level }: { level: Level }) {
   const design = useStore((s) => s.design);
   const grid = useMemo(() => buildGrid(level, design), [level, design]);
+  // Hovering a hinged door in design mode shows where it opens.
+  const hovered = useStore((s) => {
+    if (s.mode !== 'design' || !s.hover) return null;
+    const d = doorAt(s.design, s.hover[0], s.hover[1]);
+    return d && TOOL_INFO[d.tool].hinged ? d.id : null;
+  });
 
   const walls: [number, number][] = [];
   for (let y = 0; y < grid.h; y++) for (let x = 0; x < grid.w; x++) if (getCell(grid, x, y) === 'wall') walls.push([x, y]);
@@ -54,7 +60,7 @@ export function DesignLayer({ level }: { level: Level }) {
         .filter((it) => TOOL_INFO[it.tool].door)
         .map((it) => (
           <DropIn key={it.id}>
-            <DoorItem level={level} item={it} />
+            <DoorItem level={level} item={it} strong={it.id === hovered} />
           </DropIn>
         ))}
       {design.items
@@ -119,6 +125,8 @@ export function GhostLayer({ level }: { level: Level }) {
   const ramp = tool === 'ramp' ? rampDraft({ design, slopeIdx, rampDir }, x, y) : undefined;
   const { draft, check, relevant } = resolveDraft(level, design, tool, x, y, orientIdx, ramp);
   if (!relevant) return null; // nothing to build here: no ghost, no red
+  // Over a door that's already there, its own swing arc is the preview; a red ghost on top would hide it.
+  if (TOOL_INFO[tool].door && doorAt(design, x, y)) return null;
   const ghost = check.ok ? 'ok' : 'bad';
   if (TOOL_INFO[tool].terrain || TOOL_INFO[tool].attach) {
     return (
