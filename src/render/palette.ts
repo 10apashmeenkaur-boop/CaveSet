@@ -1,7 +1,7 @@
 import type { AgentType } from '../sim/types';
 
 export const COLORS = {
-  background: '#f3ece2',
+  background: '#e9f1f8',
   floor: '#e6e2dc',
   gridLine: '#cfc8bf',
   wall: '#c9705a',
