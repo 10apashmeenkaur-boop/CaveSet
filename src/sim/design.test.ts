@@ -79,6 +79,13 @@ describe('eraser takes the whole object', () => {
     expect(eraseAt(d, 7, 4).items).toHaveLength(0);
   });
 
+  it('one click on any tile of a double door (left, right, either swing tile) removes the whole door and its sign', () => {
+    const d2: Draft = { tool: 'door2', x: 8, y: 4, orient: 'v', swing: 1 }; // tiles (8,4),(8,5); swings into (9,4),(9,5)
+    const d = place(l1, place(l1, EMPTY_DESIGN, d2), { tool: 'oneway', x: 8, y: 4, orient: 'v', swing: 1 });
+    expect(d.items).toHaveLength(2);
+    for (const [x, y] of [[8, 4], [8, 5], [9, 4], [9, 5]]) expect(eraseAt(d, x, y).items).toEqual([]);
+  });
+
   it('empty floor erases nothing', () => {
     const d = place(l1, EMPTY_DESIGN, door());
     expect(eraseAt(d, 2, 2)).toBe(d);

@@ -101,9 +101,10 @@ export function GhostLayer({ level }: { level: Level }) {
           return (
             <group key={`${tx},${ty}`}>
               <TileOutline level={level} x={tx} y={ty} color={COLORS.erase} />
-              <mesh position={[wx, 0.03, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+              {/* Drawn after the door's swing arc (render order 2-3), so the swing area reads red too. */}
+              <mesh position={[wx, 0.035 + surfaceY(t, tx, ty), wz]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={4}>
                 <planeGeometry args={[0.96, 0.96]} />
-                <meshBasicMaterial color={COLORS.erase} transparent opacity={0.35} depthWrite={false} />
+                <meshBasicMaterial color={COLORS.erase} transparent opacity={0.55} depthWrite={false} />
               </mesh>
             </group>
           );
