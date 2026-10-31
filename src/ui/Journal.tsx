@@ -6,7 +6,7 @@ import { quoteFor } from './quotes';
 
 const CODES = Object.keys(PRINCIPLES) as IncidentCode[];
 
-/** Mistri Ji ki diary: one insight page per level (fail it, then pass it), then every principle learned from a failure. */
+/** Design Notebook: one insight page per level (fail it, then pass it), then every principle learned from a failure. */
 export function Journal() {
   const { progress, goTo } = useStore();
   const unlocked = new Set(progress.principles);
@@ -16,10 +16,10 @@ export function Journal() {
     <div className="page">
       <header className="page-head">
         <div>
-          <h1>Mistri Ji ki diary</h1>
+          <h1>Design Notebook</h1>
           <p className="tagline">
-            {pages.filter((l) => progress.insights.includes(l.id)).length} of {pages.length} pages written. Fail a level, then pass it, and
-            Mistri Ji writes it down.
+            {pages.filter((l) => progress.insights.includes(l.id)).length} of {pages.length} pages written. Fail a level, then pass it, to fill
+            in its page.
           </p>
         </div>
         <button className="btn ghost" onClick={() => goTo('levels')}>
@@ -39,7 +39,7 @@ export function Journal() {
               <p>{page.principle}</p>
               <p className="diary-example">🌍 {page.example}</p>
               {page.number && <p className="diary-number">📏 {page.number}</p>}
-              <p className="journal-quote">“{page.quote}” <span className="diary-by">— Mistri Ji</span></p>
+              <p className="journal-quote">“{page.quote}” <span className="diary-by">— The Master Builder</span></p>
             </article>
           ) : (
             <article key={lvl.id} className="card blueprint locked-card">

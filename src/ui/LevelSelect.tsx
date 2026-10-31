@@ -1,44 +1,6 @@
 import { LEVELS, SANDBOX } from '../levels';
 import { useStore } from '../store';
-import { useEffect, useState } from 'react';
-import { getVolume, isMuted, setMuted, setVolume } from '../audio/sfx';
-import { QuoteBanner } from './QuoteBanner';
-
-/** Sound on/off (off until the player turns it on) and volume. Both remembered per browser. */
-function SoundControls() {
-  const [muted, setM] = useState(isMuted);
-  const [volume, setV] = useState(getVolume);
-  const toggle = (on: boolean) => {
-    setMuted(!on);
-    setM(!on);
-  };
-  return (
-    <div className="sound-controls">
-      <button
-        className="btn ghost sound-toggle"
-        onClick={() => toggle(muted)}
-        title={muted ? 'Sound is off. Click to turn it on.' : 'Sound is on. Click to turn it off.'}
-        aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
-      >
-        {muted ? '🔇' : '🔊'}
-      </button>
-      <input
-        className="volume"
-        type="range"
-        min={0}
-        max={100}
-        value={Math.round(volume * 100)}
-        onChange={(e) => {
-          const v = Number(e.target.value) / 100;
-          setVolume(v);
-          setV(v);
-        }}
-        aria-label="Volume"
-        title={`Volume ${Math.round(volume * 100)}%`}
-      />
-    </div>
-  );
-}
+import { useEffect } from 'react';
 
 function Stars({ n }: { n: number }) {
   return (
@@ -68,17 +30,12 @@ export function LevelSelect() {
           <h1>Design Lab</h1>
           <p className="tagline">Design for how a thing is used, not just what it holds.</p>
         </div>
-        <div className="head-buttons">
-          <SoundControls />
-          <button className="btn ghost" onClick={() => goTo('journal')}>
-            📓 Mistri Ji ki diary
-          </button>
-        </div>
+        <button className="btn ghost" onClick={() => goTo('journal')}>
+          📓 Design Notebook
+        </button>
       </header>
 
-      <QuoteBanner />
-
-      <h2 className="section-title">Stage 1 · The Langar Hall Service Path</h2>
+      <h2 className="section-title">Stage 1 · The Dining Hall Service Path</h2>
       <div className="cards">
         {LEVELS.map((lvl, i) => {
           // A level unlocks once the previous one has at least one star.

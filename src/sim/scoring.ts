@@ -64,11 +64,11 @@ export function score(level: Level, sim: SimState, cost: number): Score {
           : `${sim.delivered} of ${sim.totalTasks} got up to the roof.`
         : level.queue
         ? passed
-          ? `All ${sim.totalTasks} sangat seated, no spills, no crossing.`
-          : `${sim.delivered} of ${sim.totalTasks} sangat seated.`
+          ? `All ${sim.totalTasks} visitors seated, no spills, no crossing.`
+          : `${sim.delivered} of ${sim.totalTasks} visitors seated.`
         : passed
           ? `All ${sim.totalTasks} loads delivered, nobody disturbed.`
-          : `${sim.delivered} of ${sim.totalTasks} delivered${failCodes.includes('DINING_DISTURBED') ? ', and people walked through the langar' : ''}.`,
+          : `${sim.delivered} of ${sim.totalTasks} delivered${failCodes.includes('DINING_DISTURBED') ? ', and people walked through the dining hall' : ''}.`,
     },
     {
       label: 'Time',

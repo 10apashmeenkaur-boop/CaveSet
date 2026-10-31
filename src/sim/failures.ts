@@ -58,7 +58,7 @@ export const PRINCIPLES: Record<IncidentCode, { title: string; principle: string
     hint: 'Add a door where people need to cross.',
   },
   DINING_DISTURBED: {
-    title: 'Keep service out of the sangat',
+    title: 'Keep service away from diners',
     principle: 'Service routes should never cut through where people sit and eat.',
     hint: 'Put the doors where the route around is short, or wall off the hall’s side entrances.',
   },
@@ -270,7 +270,7 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
       const inc = record(list, 'CROSS_FLOW', d.tick, [a.pos, b!.pos], [a.id, b!.id], 'global');
       inc.count++;
       inc.title = 'People going in ran into people leaving';
-      inc.evidence = `The sangat coming in and the pangat walking out blocked each other ${plural(inc.count, 'time')} (first near ${where(inc.tiles[0])}).`;
+      inc.evidence = `Visitors coming in and diners walking out blocked each other ${plural(inc.count, 'time')} (first near ${where(inc.tiles[0])}).`;
     }
 
     if (d.queue && spilled(a, d.queue.entrance) && a.waitTicks === QUEUE_SPILL_TICKS) {
@@ -295,8 +295,8 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
     const inc = record(list, 'DINING_DISTURBED', d.tick, [step.tile], [step.agent], 'global');
     inc.count++;
     const people = inc.agents.length;
-    inc.title = 'Sevadars walked through the dining hall';
-    inc.evidence = `${plural(people, 'person', 'people')} cut through where the sangat was eating (${plural(inc.count, 'step')} among the diners).`;
+    inc.title = 'Volunteers walked through the dining hall';
+    inc.evidence = `${plural(people, 'person', 'people')} cut through where people were eating (${plural(inc.count, 'step')} among the diners).`;
   }
 
   if (d.timeUp && !list.some((i) => i.code === 'TIME_LIMIT')) {
@@ -305,7 +305,7 @@ export function detect(prev: Incident[], d: DetectInput): Incident[] {
     inc.count = 1;
     inc.title = 'Ran out of time';
     inc.evidence = d.queue
-      ? `Only ${d.delivered} of ${d.totalTasks} sangat got to sit down in ${d.timeLimitSec}s.`
+      ? `Only ${d.delivered} of ${d.totalTasks} visitors were seated in ${d.timeLimitSec}s.`
       : d.rise
         ? `Only ${d.delivered} of ${d.totalTasks} got up to the roof in ${d.timeLimitSec}s.`
         : `Only ${d.delivered} of ${d.totalTasks} loads were delivered in ${d.timeLimitSec}s.`;

@@ -8,7 +8,7 @@ import { COLORS } from './palette';
 import { Floor, Props, Signboards } from './World';
 import { AgentsLayer, BestRunGhosts, DinerBubbles, SimRunner } from './Agents';
 import { AudioDirector, CameraDirector, Lighting } from './Feel';
-import { EditableGlow, RouteArrows } from './Onboarding';
+import { EditableGlow } from './Onboarding';
 import { BusiestMarker, HeatLayer, IncidentTiles } from './Overlays';
 import { RoofDeck, TerrainLayer } from './Terrain';
 import { TOOL_INFO } from '../sim/design';
@@ -42,7 +42,6 @@ export function Scene({ level }: { level: Level }) {
       {level.rise && <RoofDeck level={level} />}
       {level.rise && <TerrainLayer level={level} />}
       <Signboards level={level} />
-      <RouteArrows level={level} />
       <DesignLayer level={level} />
       {mode === 'design' && (
         <>

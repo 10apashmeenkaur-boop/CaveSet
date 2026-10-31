@@ -3,7 +3,7 @@ import { Howl, Howler } from 'howler';
 /**
  * All game sounds, synthesised at startup into tiny WAVs (no audio files to ship) and played with howler.
  * Soft by design: sine tones, smooth attack and release (no clicks), low-ish pitch, short.
- * Sound is OFF by default; on/off and volume are remembered per browser.
+ * Always on at a fixed low volume; there are no sound controls.
  */
 
 const RATE = 22050;
@@ -74,24 +74,8 @@ const VOICES: Record<Name, [number, Voice]> = {
   oops: [0.45, note(330, 247, 0.45, 0.02, 0.15)],
 };
 
-const MUTE_KEY = 'design-lab.muted';
-const VOLUME_KEY = 'design-lab.volume';
-export const DEFAULT_VOLUME = 0.4;
-
-const read = (k: string): string | null => {
-  try {
-    return localStorage.getItem(k);
-  } catch {
-    return null;
-  }
-};
-const write = (k: string, v: string) => {
-  try {
-    localStorage.setItem(k, v);
-  } catch {
-    // not persisted; fine
-  }
-};
+/** Fixed, quiet master volume (0..1). */
+const VOLUME = 0.25;
 
 let sounds: Record<Name, Howl> | null = null;
 
@@ -101,30 +85,9 @@ function load(): Record<Name, Howl> {
     for (const [name, [len, voice]] of Object.entries(VOICES) as [Name, [number, Voice]][]) {
       sounds[name] = new Howl({ src: [wav(len, voice)], format: ['wav'] });
     }
-    Howler.mute(isMuted());
-    Howler.volume(getVolume());
+    Howler.volume(VOLUME);
   }
   return sounds;
-}
-
-export function isMuted(): boolean {
-  return read(MUTE_KEY) !== '0';
-}
-
-export function setMuted(muted: boolean) {
-  write(MUTE_KEY, muted ? '1' : '0');
-  Howler.mute(muted);
-}
-
-/** 0..1, default 40%. */
-export function getVolume(): number {
-  const v = Number(read(VOLUME_KEY));
-  return read(VOLUME_KEY) !== null && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : DEFAULT_VOLUME;
-}
-
-export function setVolume(v: number) {
-  write(VOLUME_KEY, String(v));
-  Howler.volume(v);
 }
 
 const lastPlayed: Partial<Record<Name, number>> = {};

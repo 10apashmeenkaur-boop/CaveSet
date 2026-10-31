@@ -15,15 +15,15 @@ export function QuoteBanner({ codes }: { codes?: FailureCode[] }) {
   );
 }
 
-/** In a level, the quote card is Mistri Ji: his brief, then a nudge ("salaah") after repeated failed runs. */
+/** In a level, the quote card is the Master Builder (Mistri Ji in code): his brief, then a piece of advice after repeated failed runs. */
 export function MistriCard({ level }: { level: Level }) {
   const line = useStore((s) => mistriLine(level, s.progress));
   if (!line) return <QuoteBanner />;
   return (
     <figure className={`quote mistri ${line.hint ? 'salaah' : ''}`}>
-      {line.hint && <span className="salaah-tag">Mistri Ji ki salaah</span>}
+      {line.hint && <span className="salaah-tag">Master Builder’s advice</span>}
       <blockquote>“{line.text}”</blockquote>
-      <figcaption>— Mistri Ji</figcaption>
+      <figcaption>— The Master Builder</figcaption>
     </figure>
   );
 }

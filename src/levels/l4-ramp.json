@@ -1,19 +1,19 @@
 {
   "id": "l4-ramp",
   "title": "Ramp to the Roof",
-  "brief": "Sacks go up to roof storage, 1.2 m up: 6 carriers, 2 trolleys, a wheelchair sevadar and an elderly visitor. Everyone gets up. Budget ₹24,000.",
+  "brief": "Sacks go up to roof storage, 1.2 m up: 6 carriers, 2 trolleys, a wheelchair user and an elderly visitor. Everyone must get up. Budget ₹24,000.",
   "goalLabel": "⬆ {n}/{total} on the roof",
   "mistri": {
-    "brief": "Bori bhi upar jaayegi, wheelchair bhi. Jagah dekh ke banana.",
+    "brief": "Sacks and wheelchairs both need to get up. Survey the space before you build.",
     "hints": {
-      "NO_ACCESSIBLE_ROUTE": "Seedhi sab ke liye nahi hoti, puttar.",
-      "RAMP_TOO_STEEP": "Wheelchair kitni chadhai le sakti hai? Pehle naapo.",
-      "TROLLEY_ROLLBACK": "Bhaari trolley dheemi dhalaan maangti hai.",
-      "TIGHT_TURN": "Mudne ke liye poori jagah chahiye, kone mein nahi.",
-      "NO_HANDRAIL": "Bade-buzurg upar chadhte hue kya pakdenge?",
-      "NO_PATH": "Zameen se chhat tak raasta judna chahiye.",
-      "TIME_LIMIT": "Dekho kaun sabse dheere chal raha hai, aur kyon.",
-      "default": "Pehle naapo: kitna lamba ramp chahiye, kitni jagah hai?"
+      "NO_ACCESSIBLE_ROUTE": "Stairs do not work for everyone.",
+      "RAMP_TOO_STEEP": "How steep a slope can a wheelchair manage? Measure first.",
+      "TROLLEY_ROLLBACK": "A heavy trolley needs a gentle slope.",
+      "TIGHT_TURN": "A turn needs a full landing, not a corner.",
+      "NO_HANDRAIL": "What will older visitors hold on to as they climb?",
+      "NO_PATH": "The route must connect the ground to the roof.",
+      "TIME_LIMIT": "Watch who moves slowest, and ask why.",
+      "default": "Measure first: how long must the ramp be, and how much space is there?"
     }
   },
   "insight": {
@@ -21,7 +21,7 @@
     "principle": "A ramp gentle enough for a wheelchair is long. Fold it into a switchback with landings, and give it its space before anything else is built.",
     "example": "Well-planned stations and hospitals draw their ramps first. Ramps squeezed in later end up too steep or too tight to turn.",
     "number": "1.2 m up at 1:12 takes 14.4 m of ramp, with a flat landing at least every 9 m.",
-    "quote": "Ramp baad mein nahi, pehle socho, puttar."
+    "quote": "Plan the ramp first, not last."
   },
   "grid": { "w": 20, "h": 12 },
   "fixedWalls": [],

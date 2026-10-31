@@ -43,9 +43,6 @@ export const COLORS = {
   rail: '#8a8f99',
   busiest: '#e5394b',
   erase: '#e5394b',
-  /** Route arrows: people going in, and people leaving / walking back. */
-  routeIn: '#2f9e8f',
-  routeOut: '#e07b24',
   post: '#8a5a3b',
   /** Ramp level. */
   deck: '#e9dcc6',

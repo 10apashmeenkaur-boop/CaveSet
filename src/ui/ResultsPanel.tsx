@@ -30,7 +30,7 @@ export function ResultsPanel({ level }: { level: Level }) {
   return (
     <aside className="results blueprint">
       <header>
-        <h2>{sandbox ? 'Sandbox run' : r.passed ? 'Seva done!' : 'Not quite yet'}</h2>
+        <h2>{sandbox ? 'Sandbox run' : r.passed ? 'Service complete' : 'Not quite yet'}</h2>
         {!sandbox && <Stars n={r.stars} />}
       </header>
 
@@ -82,7 +82,7 @@ export function ResultsPanel({ level }: { level: Level }) {
           <p className="cards-tip">Click a card to see where it happened.</p>
         </>
       ) : (
-        <p className="clean">No incidents. Smooth seva, nobody complained.</p>
+        <p className="clean">No incidents. Everything ran smoothly and nobody complained.</p>
       )}
 
       <footer>

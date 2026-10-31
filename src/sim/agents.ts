@@ -15,13 +15,13 @@ import type { AgentType, StationKind, Tile } from './types';
 
 /** Width in tiles and speed in tiles per second, from the real-world scale in constants.ts. */
 export const AGENT_INFO: Record<AgentType, { width: 1 | 2; speed: number; label: string }> = {
-  empty: { width: PERSON_TILES, speed: WALK_SPEED, label: 'Sevadar' },
+  empty: { width: PERSON_TILES, speed: WALK_SPEED, label: 'Volunteer' },
   crate: { width: CRATE_CARRIER_TILES, speed: CRATE_SPEED, label: 'Crate carrier' },
   tray: { width: PERSON_TILES, speed: TRAY_SPEED, label: 'Tray carrier' },
   elderly: { width: PERSON_TILES, speed: ELDERLY_SPEED, label: 'Elderly visitor' },
-  sangat: { width: PERSON_TILES, speed: WALK_SPEED, label: 'Sangat' },
+  sangat: { width: PERSON_TILES, speed: WALK_SPEED, label: 'Visitor' },
   sack: { width: PERSON_TILES, speed: SACK_SPEED, label: 'Sack carrier' },
-  wheelchair: { width: WHEELCHAIR_TILES, speed: WHEELCHAIR_SPEED, label: 'Wheelchair sevadar' },
+  wheelchair: { width: WHEELCHAIR_TILES, speed: WHEELCHAIR_SPEED, label: 'Wheelchair user' },
   trolley: { width: 2, speed: TROLLEY_SPEED, label: 'Sack trolley' },
 };
 

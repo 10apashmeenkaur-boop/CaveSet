@@ -392,8 +392,6 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
   user-select: none;
 }
 
-.head-buttons { display: flex; gap: 10px; align-items: center; }
-.sound-toggle { padding: 10px 14px; }
 .checks li.info .mark { color: var(--ink-soft); font-size: 15px; }
 
 /* Mistri Ji in the quote card: same card, a small tag when he gives a hint. */
@@ -434,8 +432,6 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .signboard.sign-entrance, .signboard.sign-exit { background: #2f7d4f; outline-color: #2f7d4f; }
 
 /* Sound controls on level select */
-.sound-controls { display: flex; align-items: center; gap: 8px; }
-.sound-controls .volume { width: 90px; accent-color: var(--ink); }
 
 /* Ramp level: small height number on each landing */
 .height-tag {
