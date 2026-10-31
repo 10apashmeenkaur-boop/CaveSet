@@ -18,90 +18,89 @@ export type FailureCode = Extract<
   | 'NO_ACCESSIBLE_ROUTE'
 >;
 
-/** What people say when a design fails them. Short (under 8 words), plain, polite English. Used for banners and speech bubbles. */
+/** What people say when a design fails them: short (under 8 words), practical, about the problem. Used for banners and speech bubbles. */
 export const QUOTES: Record<FailureCode, string[]> = {
   TOO_NARROW: [
-    'This crate will not fit through.',
+    'This crate won’t fit.',
     'This door is too narrow.',
-    'Who designed this doorway?',
-    'My crate is stuck. Please help.',
+    'My crate is stuck in the door.',
+    'I need a wider door.',
   ],
   HEAD_ON_JAM: [
-    'Please move, I am carrying this.',
-    'After you. No, after you.',
-    'Could you step aside, please?',
-    'We cannot both fit through.',
+    'Please move, I’m carrying this.',
+    'We can’t both fit through.',
+    'Please step aside.',
+    'Let me pass first, please.',
   ],
   SWING_BLOCK: [
-    'Ouch, the door hit me.',
-    'Please open the door.',
-    'The door will not open.',
+    'The door is blocked.',
+    'The door won’t open.',
     'Someone is behind the door.',
+    'Please move, the door can’t open.',
   ],
   NO_PATH: [
-    'Where am I supposed to go?',
-    'Which way is it?',
+    'There’s no way through.',
+    'Which way do I go?',
     'There are walls everywhere.',
-    'There is no way through.',
+    'I can’t reach the other side.',
   ],
   TIME_LIMIT: [
-    'The meal is running late.',
-    'Please hurry, people are waiting.',
-    'The dishes are still dirty.',
-    'Why is this route so long?',
+    'We’re running late.',
+    'This route is too long.',
+    'Too much waiting here.',
+    'People are waiting for this.',
   ],
   DINING_DISTURBED: [
-    'Excuse me, we are eating.',
-    'Please do not walk through here.',
-    'Careful, you will spill the food.',
-    'A crate over our plates?',
+    'Excuse me, we’re eating here.',
+    'Please don’t walk through here.',
+    'Careful, you’ll spill the food.',
+    'Please go around the hall.',
   ],
   QUEUE_OVERFLOW: [
-    'There is no room to come in.',
-    'The line reaches the street.',
-    'Why is the shoe stand so slow?',
-    'We are stuck at the door.',
+    'There’s no room to come in.',
+    'The line is out the door.',
+    'The shoe stand is too slow.',
+    'We’re stuck at the entrance.',
   ],
   CROSS_FLOW: [
-    'Excuse me, I need to leave.',
-    'Please wait, I am coming out.',
-    'One path for in and out?',
+    'Excuse me, I need to get out.',
+    'Please wait, I’m coming out.',
+    'In and out share one path.',
     'Let me through, please.',
   ],
   UNDERUSED_HALL: [
-    'The hall is empty, the line long.',
     'Half the seats are empty.',
-    'Where is everyone?',
+    'The line is too slow.',
+    'We’re still waiting to sit.',
     'The food is getting cold.',
   ],
   RAMP_TOO_STEEP: [
-    'I cannot get up this slope.',
-    'This ramp is far too steep.',
-    'Is this a ramp or a hill?',
+    'I can’t get up this slope.',
+    'This ramp is too steep.',
+    'I can’t push up this.',
   ],
   TROLLEY_ROLLBACK: [
     'The trolley is rolling back!',
-    'Hold it, it is slipping!',
+    'It’s too steep to push.',
     'The sacks rolled back down.',
   ],
   NO_HANDRAIL: [
     'I need something to hold on to.',
-    'Is there no handrail here?',
-    'Where is the railing?',
+    'There’s no handrail here.',
+    'I can’t climb without a rail.',
   ],
   TIGHT_TURN: [
-    'How am I meant to turn?',
-    'My wheelchair cannot turn here.',
-    'I need room to turn.',
+    'I can’t turn here.',
+    'There’s no room to turn.',
+    'My wheelchair can’t turn here.',
   ],
   NO_ACCESSIBLE_ROUTE: [
-    'Stairs? How do I get up?',
-    'Is there no way up for me?',
-    'A trolley cannot take stairs.',
+    'I can’t use the stairs.',
+    'There’s no ramp for me.',
+    'A trolley can’t take stairs.',
   ],
 };
 
-/** Who says it, shown under banner quotes. */
 export const FAILURE_LABEL: Record<FailureCode, string> = {
   TOO_NARROW: 'a volunteer, stuck at a narrow door',
   HEAD_ON_JAM: 'a volunteer, jammed in a doorway',
@@ -123,9 +122,9 @@ export type StuckKind = 'stuck' | 'blocked' | 'noWay';
 
 /** What someone says when they are stuck or kept waiting (shown alongside the failure quotes). */
 export const STUCK_LINES: Record<StuckKind, string[]> = {
-  stuck: ['I’m stuck.', 'I can’t get through.', 'I can’t move.'],
-  blocked: ['I can’t get through.', 'Excuse me, may I pass?', 'Someone is in the way.'],
-  noWay: ['There’s no way out.', 'There’s no way through.', 'Where do I go?'],
+  stuck: ['I’m stuck here.', 'I can’t move.', 'I can’t get through.'],
+  blocked: ['Someone is in the way.', 'Please move, I need to pass.', 'The way is blocked.'],
+  noWay: ['There’s no way through.', 'Where do I go?', 'There’s no way out.'],
 };
 
 export type Quote = { text: string; code: FailureCode };
