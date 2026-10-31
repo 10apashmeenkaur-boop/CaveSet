@@ -8,27 +8,26 @@ import type { Level } from '../sim/types';
 import { useStore } from '../store';
 import { tileToWorld } from './coords';
 
-const easeOutBounce = (x: number) => {
-  const n = 7.5625;
-  const d = 2.75;
-  if (x < 1 / d) return n * x * x;
-  if (x < 2 / d) return n * (x -= 1.5 / d) * x + 0.75;
-  if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + 0.9375;
-  return n * (x -= 2.625 / d) * x + 0.984375;
+/** Placement settle: a small, quick drop with the slightest overshoot. */
+const DROP_HEIGHT = 0.15;
+const DROP_SEC = 0.16;
+const easeOutBack = (x: number) => {
+  const c = 1.2;
+  return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2;
 };
 
-/** Children fall into place with a little bounce when they first appear. */
+/** Children settle into place with a tiny drop when they first appear. */
 export function DropIn({ children }: { children: ReactNode }) {
   const g = useRef<Group>(null);
   const born = useRef<number | null>(null);
   useFrame(({ clock }) => {
     if (!g.current) return;
     born.current ??= clock.elapsedTime;
-    const p = Math.min(1, (clock.elapsedTime - born.current) / 0.45);
-    g.current.position.y = (1 - easeOutBounce(p)) * 1.4;
+    const p = Math.min(1, (clock.elapsedTime - born.current) / DROP_SEC);
+    g.current.position.y = (1 - easeOutBack(p)) * DROP_HEIGHT;
   });
   return (
-    <group ref={g} position-y={1.4}>
+    <group ref={g} position-y={DROP_HEIGHT}>
       {children}
     </group>
   );
