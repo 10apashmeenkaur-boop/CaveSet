@@ -112,6 +112,8 @@ export const QUEUE_SPILL_TICKS = 80;
 export const CROSS_FLOW_TICKS = 20;
 /** The hall counts as underused if fewer than this share of its seats are filled when time runs out. */
 export const UNDERUSED_SHARE = 0.5;
+/** Most waiting spots drawn in one station's line (display only); anyone beyond them is drawn where they stand. */
+export const LINE_SLOTS = 10;
 /** With no free seat, wait this long at the last station before looking again. */
 export const SEAT_RETRY_TICKS = 10;
 /** The busiest-station marker only shows once this many people are heading for or waiting at one unit. */

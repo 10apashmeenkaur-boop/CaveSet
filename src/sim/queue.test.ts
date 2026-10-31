@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkPlace, costOf, EMPTY_DESIGN, place, type Design, type Draft } from './design';
+import { queueLines } from './lines';
 import { findPath, makeWorld } from './pathfinding';
 import { score } from './scoring';
 import { initSim, runToEnd, step } from './simulate';
@@ -124,5 +125,29 @@ describe('level 3: building', () => {
     const world = makeWorld(l3, rails);
     const path = findPath(world, [0, 5], [2, 5], 1)!;
     expect(path.some(([x, y]) => x === 1 && y >= 3)).toBe(false);
+  });
+  it('drawn waiting lines: single file behind each station, no shared tiles, nothing cut off', () => {
+    for (const d of [EMPTY_DESIGN, build([shoe2, shoe3, ...taps2, exitDoor]), build([...taps2, tap4, exitDoor])]) {
+      const world = makeWorld(l3, d);
+      const lines = queueLines(l3, world.grid, world.units);
+      const taken = new Set<string>();
+      lines.forEach((line, i) => {
+        line.forEach((t, k) => {
+          const prev = k ? line[k - 1] : world.units[i].serve;
+          expect(Math.abs(t[0] - prev[0]) + Math.abs(t[1] - prev[1])).toBe(1); // one tile apart
+          expect(world.grid.cells[t[1] * world.grid.w + t[0]]).toBe('floor');
+          expect(world.units.some((u) => u.serve[0] === t[0] && u.serve[1] === t[1])).toBe(false);
+          expect(taken.has(t.join())).toBe(false);
+          taken.add(t.join());
+        });
+      });
+      // With every line full, everyone can still get from the entrance to every standing spot and the hall.
+      const blocked = { occupied: new Set<string>(), recent: new Array(world.grid.w * world.grid.h).fill(0), blocked: taken };
+      const ent: [number, number] = [l3.zones.entrance.x, l3.zones.entrance.y];
+      for (const u of world.units) expect(findPath(world, ent, u.serve, 1, blocked)).not.toBeNull();
+    }
+    // The fixed shoe stand's line, with nothing built, is a real line (not a blob).
+    const empty = makeWorld(l3, EMPTY_DESIGN);
+    expect(queueLines(l3, empty.grid, empty.units)[0].length).toBeGreaterThanOrEqual(5);
   });
 });
