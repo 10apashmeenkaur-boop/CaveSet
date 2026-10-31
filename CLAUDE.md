@@ -25,6 +25,8 @@ Plans: `ROADMAP.md` (takes priority) and `PLAN.md`. Work through ROADMAP §9 pro
 - All numbers live in `src/sim/constants.ts` (1 tile = 0.6 m; speeds in tiles/s from real m/s). No magic numbers in sim code.
 - Routing is crowd-aware (occupied + recent-wait costs) so people spread over doors.
 - UI: keep the pre-P6 game UI (brief card top-left; budget + quote cards top-right; toolbar with names + prices; Simulate button + sim bar). The user rejected the compact P6 HUD. Ask before changing the UI layout.
+- Speech (`src/render/Speech.tsx`, render only): stuck/kept-waiting people say formal lines (`STUCK_LINES`: "I’m stuck.", "I can’t get through.", "There’s no way out."); complaints and disturbed diners use the failure quotes. Each bubble shows 4 real seconds then fades over 1 s; max 3 bubbles, nearby ones stack; max 3 "?!" markers (most stuck, no bubble).
+- Playback: 1x plays the sim at half rate (`PLAYBACK_RATE` in Agents.tsx) to match the original pace; sim constants and timings unchanged. Placement drop is tiny (0.15, 0.16 s).
 - Sound: the "Soft wood" set, always on at a fixed low volume (no toggle, slider or any sound UI). Soft: sine tones, smooth attack/release, low pitch, short. No crowd murmur, no slow-mo, no evening lighting. Items drop in with a bounce.
 - Onboarding: only a soft pulsing outline on buildable walls. No route arrows, hint bubbles or route label pills.
 - Every zone has a painted signboard on the wall behind its far edge (or on a post if there's none), always facing the camera. Speech bubbles are only for what people say, never place names.

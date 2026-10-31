@@ -119,6 +119,15 @@ export const FAILURE_LABEL: Record<FailureCode, string> = {
   NO_ACCESSIBLE_ROUTE: 'a wheelchair user, at the foot of the stairs',
 };
 
+export type StuckKind = 'stuck' | 'blocked' | 'noWay';
+
+/** What someone says when they are stuck or kept waiting (shown alongside the failure quotes). */
+export const STUCK_LINES: Record<StuckKind, string[]> = {
+  stuck: ['I’m stuck.', 'I can’t get through.', 'I can’t move.'],
+  blocked: ['I can’t get through.', 'Excuse me, may I pass?', 'Someone is in the way.'],
+  noWay: ['There’s no way out.', 'There’s no way through.', 'Where do I go?'],
+};
+
 export type Quote = { text: string; code: FailureCode };
 
 export function pickQuote(codes: FailureCode[] = Object.keys(QUOTES) as FailureCode[]): Quote {
