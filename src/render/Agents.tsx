@@ -16,11 +16,11 @@ import { Person } from './Person';
 
 const TICK_SEC = 1 / TICKS_PER_SEC;
 /**
- * Sim seconds played per real second at 1x. Real-world speeds (P4) doubled how fast people cross a tile,
- * so 1x plays at half rate to look like the original pace; 2x and 4x scale from this. Playback only:
- * the sim, its timings and its results are unchanged.
+ * PLAYBACK_SPEED: sim seconds played per real second at 1x (2x and 4x scale from this). Tweak this to make
+ * people look faster or slower on screen. 1 = real time (felt too fast), 0.5 = half (felt too slow); 0.75 is
+ * halfway. Playback only: the sim, its timings, results and tests are unchanged.
  */
-const PLAYBACK_RATE = 0.5;
+export const PLAYBACK_SPEED = 0.75;
 
 /** Fraction of the way to the next sim tick, so people glide between ticks instead of hopping. */
 const clock = { acc: 0 };
@@ -86,7 +86,7 @@ export function SimRunner() {
   useFrame((_, dt) => {
     const s = useStore.getState();
     if (!s.running) return;
-    clock.acc += Math.min(dt, 0.25) * s.speed * PLAYBACK_RATE;
+    clock.acc += Math.min(dt, 0.25) * s.speed * PLAYBACK_SPEED;
     while (clock.acc >= TICK_SEC && useStore.getState().running) {
       clock.acc -= TICK_SEC;
       useStore.getState().tick();
