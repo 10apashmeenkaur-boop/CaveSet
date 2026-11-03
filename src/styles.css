@@ -544,3 +544,10 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .rack-drawer-choices .choice { min-width: 110px; padding: 6px 12px; }
 .rack-drawer .part-info { margin: 0; font-size: 13px; }
 .rack-drawer .results-close { width: 28px; height: 28px; font-size: 13px; }
+
+/* Utensil Rack: small tags naming each group of utensils (design mode) */
+.rack-tag {
+  font-family: 'Fredoka', system-ui, sans-serif; font-size: 13px; font-weight: 600; white-space: nowrap; user-select: none;
+  color: #23395b; background: #fff8e6; border: 2px solid #23395b; border-radius: 999px; padding: 2px 10px;
+  box-shadow: 0 2px 0 rgba(35, 57, 91, 0.3);
+}

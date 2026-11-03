@@ -1,3 +1,4 @@
+import { Html } from '@react-three/drei';
 import { useMemo } from 'react';
 import { CanvasTexture, Color, DoubleSide, RepeatWrapping } from 'three';
 import { RACK_WATER_ML } from '../sim/constants';
@@ -192,21 +193,51 @@ function Water({ y, w, d, ml, full, round }: { y: number; w: number; d: number; 
 }
 
 function Plate({ u, pos, upright }: { u: Utensil; pos: [number, number, number]; upright: boolean }) {
+  // A steel thali: a flat disc with a raised rim, so it reads as a plate from any angle.
   return (
-    <mesh position={pos} rotation={upright ? [0, 0, Math.PI / 2] : [0, 0, 0]} castShadow>
-      <cylinderGeometry args={[PLATE_R, PLATE_R * 0.8, 0.05, 28]} />
-      <DishMat color={COLORS.plate} wet={wetness(u)} />
-    </mesh>
+    <group position={pos} rotation={upright ? [0, 0, Math.PI / 2] : [0, 0, 0]}>
+      <mesh castShadow>
+        <cylinderGeometry args={[PLATE_R * 0.86, PLATE_R * 0.86, 0.03, 32]} />
+        <DishMat color={COLORS.plate} wet={wetness(u)} metal={0.35} />
+      </mesh>
+      <mesh position={[0, 0.03, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <torusGeometry args={[PLATE_R * 0.93, 0.07, 8, 40]} />
+        <DishMat color={COLORS.plate} wet={wetness(u)} metal={0.35} />
+      </mesh>
+    </group>
   );
 }
 
 function Bowl({ u, pos }: { u: Utensil; pos: [number, number, number] }) {
-  // Upside down: a half-sphere shell, open side on the base.
+  // A katori upside down: sloped sides, a flat bottom on top with a small foot ring, and a rolled rim on the base.
   return (
-    <mesh position={pos} castShadow>
-      <sphereGeometry args={[BOWL_R, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
-      <DishMat color={COLORS.bowl} wet={wetness(u)} />
-    </mesh>
+    <group position={pos}>
+      <mesh position={[0, 0.22, 0]} castShadow>
+        <cylinderGeometry args={[BOWL_R * 0.62, BOWL_R, 0.44, 28, 1, true]} />
+        <DishMat color={COLORS.bowl} wet={wetness(u)} metal={0.35} />
+      </mesh>
+      <mesh position={[0, 0.44, 0]}>
+        <cylinderGeometry args={[BOWL_R * 0.62, BOWL_R * 0.62, 0.02, 28]} />
+        <DishMat color={COLORS.bowl} wet={wetness(u)} metal={0.35} />
+      </mesh>
+      <mesh position={[0, 0.47, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[BOWL_R * 0.42, 0.035, 6, 24]} />
+        <DishMat color={COLORS.bowl} wet={wetness(u)} metal={0.35} />
+      </mesh>
+      <mesh position={[0, 0.02, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <torusGeometry args={[BOWL_R, 0.045, 6, 28]} />
+        <DishMat color={COLORS.bowl} wet={wetness(u)} metal={0.35} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Small name tags so each group of utensils is easy to tell apart (design mode only). */
+function GroupTag({ pos, text }: { pos: [number, number, number]; text: string }) {
+  return (
+    <Html position={pos} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
+      <div className="rack-tag">{text}</div>
+    </Html>
   );
 }
 
@@ -281,6 +312,7 @@ export function RackScene({ level }: { level: Level }) {
   const plates = st.items.filter((u) => u.kind === 'plate');
   const bowls = st.items.filter((u) => u.kind === 'bowl');
   const spoons = st.items.filter((u) => u.kind === 'spoon');
+  const designing = useStore((s) => s.mode === 'design');
   const places = platePlaces(r, plates.length);
   const dip = (x: number) => sag * (1 - (2 * Math.abs(x)) / W);
 
@@ -313,6 +345,16 @@ export function RackScene({ level }: { level: Level }) {
         return <Bowl key={`b${i}`} u={u} pos={[x, BASE_Y + 0.02 - dip(x), i < 5 ? 0.9 : 2.0]} />;
       })}
       {r.cup !== 'none' && <CutleryCup r={r} pool={st.cupPool} />}
+      {designing && (
+        <>
+          <GroupTag pos={[0, BASE_Y + (r.dividers ? PLATE_R * 2 + 0.35 : 0.7), -1.2]} text={`${plates.length} plates`} />
+          <GroupTag pos={[-1.6, BASE_Y + 1, 1.45]} text={`${bowls.length} bowls`} />
+          <GroupTag
+            pos={r.cup !== 'none' ? [CUP.x, BASE_Y + CUP.h + 0.6, CUP.z] : [3.4, BASE_Y + 0.6, 1.3]}
+            text={`${spoons.length} spoons`}
+          />
+        </>
+      )}
       {spoons.map((u, i) => {
         if (u.fallen) {
           // On the drip tray or the counter, under the front right of the rack.
