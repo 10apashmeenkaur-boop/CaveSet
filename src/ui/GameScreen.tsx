@@ -6,7 +6,7 @@ import { BudgetBar } from './BudgetBar';
 import { MistriCard } from './QuoteBanner';
 import { ResultsPanel } from './ResultsPanel';
 import { SimBar } from './SimBar';
-import { RackParts } from './RackParts';
+import { RackBar } from './RackParts';
 import { DictionaryCard, RackSheetCard } from './RackSheet';
 import { Toolbar } from './Toolbar';
 
@@ -45,14 +45,12 @@ export function GameScreen() {
     <div className="game">
       <Scene level={level} />
 
-      <div className={`hud top-left blueprint ${level.rack ? 'with-parts' : ''}`}>
+      <div className="hud top-left blueprint">
         <button className="btn ghost small" onClick={() => goTo('levels')}>
           ← Levels
         </button>
         <h2>{level.title}</h2>
         <p>{level.brief}</p>
-        {/* The Utensil Rack is built from this panel: every option visible, each explained. */}
-        {level.rack && mode === 'design' && <RackParts />}
       </div>
 
       {ended ? (
@@ -68,7 +66,8 @@ export function GameScreen() {
 
       {mode === 'design' ? (
         <>
-          {!level.rack && <Toolbar level={level} />}
+          {/* The Utensil Rack is built from its own bar of parts, in the same place and style as the toolbar. */}
+          {level.rack ? <RackBar /> : <Toolbar level={level} />}
           <div className="hud bottom-right">
             <SimBar level={level} />
           </div>

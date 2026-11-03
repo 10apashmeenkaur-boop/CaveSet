@@ -531,3 +531,16 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .rack-parts-toggle .fold-chev { font-size: 14px; }
 .rack-summary { font-size: 13px; color: var(--ink-soft); line-height: 1.4; margin: 0; }
 .rack-parts.folded { gap: 6px; }
+
+/* Utensil Rack bottom bar: parts as tool buttons, one options drawer at a time above the bar */
+.rack-tool { min-width: 112px; }
+.rack-tool-part { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-soft); }
+.rack-tool.active .rack-tool-part { color: var(--accent-ink); }
+.tool-side.grid .span-2 { grid-column: span 2; }
+.rack-drawer { width: min(640px, calc(100vw - 32px)); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.rack-drawer-head { display: flex; justify-content: space-between; align-items: center; }
+.rack-drawer-title { font-weight: 600; font-size: 15px; }
+.rack-drawer-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.rack-drawer-choices .choice { min-width: 110px; padding: 6px 12px; }
+.rack-drawer .part-info { margin: 0; font-size: 13px; }
+.rack-drawer .results-close { width: 28px; height: 28px; font-size: 13px; }

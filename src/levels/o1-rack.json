@@ -33,7 +33,7 @@
   "budget": 2000,
   "timeLimitSec": 1800,
   "targetSec": 1500,
-  "starCost": 1100,
+  "starCost": 1300,
   "seed": 1,
   "allowedTools": []
 }

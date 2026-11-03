@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DEFAULT_RACK,
+  gapCost,
   RACK_BASES,
   RACK_CUPS,
   RACK_GAPS,
@@ -13,156 +14,168 @@ import { useStore } from '../store';
 import { BASE_INFO, CUP_INFO, GAP_INFO, MATERIAL_INFO, PLATES_INFO, UNDER_INFO } from './rackText';
 import { inr } from './Toolbar';
 
-type Choice<T> = { value: T; label: string; cost?: number };
+type Choice = { label: string; cost: number; on: boolean; pick: () => void };
+type Part = { key: string; icon: string; title: string; current: string; cost: number; info: string; choices: Choice[] };
 
-/** One part of the rack: a row of choices, and a line saying what the chosen one does. */
-function Part<T>({
-  n,
-  title,
-  choices,
-  value,
-  onPick,
-  info,
-}: {
-  n: number;
-  title: string;
-  choices: Choice<T>[];
-  value: T;
-  onPick: (v: T) => void;
-  info: string;
-}) {
-  return (
-    <div className="part">
-      <div className="part-title">
-        <span className="part-n">{n}</span> {title}
-      </div>
-      <div className="part-choices" role="radiogroup" aria-label={title}>
-        {choices.map((c) => (
-          <button
-            key={String(c.value)}
-            role="radio"
-            aria-checked={c.value === value}
-            className={`choice ${c.value === value ? 'on' : ''}`}
-            onClick={() => onPick(c.value)}
-          >
-            <span>{c.label}</span>
-            {c.cost !== undefined && <span className="choice-cost">{c.cost ? inr(c.cost) : 'free'}</span>}
-          </button>
-        ))}
-      </div>
-      <p className="part-info">{info}</p>
-    </div>
-  );
+const CUP_LABEL = { none: 'On the base', solid: 'Solid cup', perforated: 'Perforated cup' } as const;
+/** The parts in bar order (keys 1–6). */
+const PART_KEYS = ['base', 'gap', 'material', 'plates', 'under', 'cup'];
+
+/** The six parts of the rack, each with its choices, the current choice, its price and what it does. */
+function partsOf(r: RackDesign, set: (c: Partial<RackDesign>) => void): Part[] {
+  return [
+    {
+      key: 'base',
+      icon: '🧺',
+      title: 'Base surface',
+      current: RACK_NAMES.base[r.base],
+      cost: RACK_PRICES.base[r.base],
+      info: BASE_INFO[r.base],
+      choices: RACK_BASES.map((b) => ({ label: RACK_NAMES.base[b], cost: RACK_PRICES.base[b], on: r.base === b, pick: () => set({ base: b }) })),
+    },
+    {
+      key: 'gap',
+      icon: '↔️',
+      title: 'Opening size',
+      current: `${r.gap} mm`,
+      cost: gapCost(r),
+      info:
+        r.base === 'tray'
+          ? `A solid tray has no openings, so this costs nothing. It still sets how far apart plates stand in dividers (${r.gap} mm).`
+          : GAP_INFO[r.gap],
+      choices: RACK_GAPS.map((g) => ({
+        label: `${g} mm`,
+        cost: r.base === 'tray' ? 0 : RACK_PRICES.gap[g],
+        on: r.gap === g,
+        pick: () => set({ gap: g }),
+      })),
+    },
+    {
+      key: 'material',
+      icon: '🔩',
+      title: 'Frame material',
+      current: RACK_NAMES.material[r.material],
+      cost: RACK_PRICES.material[r.material],
+      info: MATERIAL_INFO[r.material],
+      choices: RACK_MATERIALS.map((m) => ({ label: RACK_NAMES.material[m], cost: RACK_PRICES.material[m], on: r.material === m, pick: () => set({ material: m }) })),
+    },
+    {
+      key: 'plates',
+      icon: '🍽️',
+      title: 'Plates',
+      current: r.dividers ? 'Upright' : 'Lying flat',
+      cost: r.dividers ? RACK_PRICES.dividers : 0,
+      info: r.dividers ? PLATES_INFO.upright : PLATES_INFO.flat,
+      choices: [
+        { label: 'Lying flat', cost: 0, on: !r.dividers, pick: () => set({ dividers: false }) },
+        { label: 'Upright in dividers', cost: RACK_PRICES.dividers, on: r.dividers, pick: () => set({ dividers: true }) },
+      ],
+    },
+    {
+      key: 'under',
+      icon: '💧',
+      title: 'Under the rack',
+      current: r.dripTray ? 'Drip tray' : 'Nothing',
+      cost: r.dripTray ? RACK_PRICES.dripTray : 0,
+      info: r.dripTray ? UNDER_INFO.tray : UNDER_INFO.none,
+      choices: [
+        { label: 'Nothing', cost: 0, on: !r.dripTray, pick: () => set({ dripTray: false }) },
+        { label: 'Drip tray', cost: RACK_PRICES.dripTray, on: r.dripTray, pick: () => set({ dripTray: true }) },
+      ],
+    },
+    {
+      key: 'cup',
+      icon: '🥄',
+      title: 'Spoons',
+      current: CUP_LABEL[r.cup],
+      cost: RACK_PRICES.cup[r.cup],
+      info: CUP_INFO[r.cup],
+      choices: RACK_CUPS.map((c) => ({ label: CUP_LABEL[c], cost: RACK_PRICES.cup[c], on: r.cup === c, pick: () => set({ cup: c }) })),
+    },
+  ];
 }
 
 /**
- * The Utensil Rack's build panel: every option visible at once, grouped by part, each with a plain line saying what
- * it does. Replaces the cycling toolbar so nothing is hidden behind clicks.
+ * The Utensil Rack's build bar, in the same place and style as every level's toolbar. Each button is one part of
+ * the rack showing its current choice and price; clicking it opens that part's options just above the bar (one at a
+ * time, click again or ✕ to close), with a plain line saying what the chosen option does.
  */
-export function RackParts() {
+export function RackBar() {
   const r = useStore((s) => s.design.rack ?? DEFAULT_RACK);
   const setRack = useStore((s) => s.setRack);
   const clearDesign = useStore((s) => s.clearDesign);
   const undo = useStore((s) => s.undo);
+  const redo = useStore((s) => s.redo);
   const canUndo = useStore((s) => s.past.length > 0);
-  const set = (c: Partial<RackDesign>) => setRack(c);
+  const canRedo = useStore((s) => s.future.length > 0);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const parts = partsOf(r, setRack);
+  const open = parts.find((p) => p.key === openKey);
   const isDefault = JSON.stringify(r) === JSON.stringify(DEFAULT_RACK);
-  // The panel folds away to show the rack; folded, it shows a one-line summary of the choices.
-  const [open, setOpen] = useState(true);
-  const summary = [
-    RACK_NAMES.base[r.base],
-    `${r.gap} mm`,
-    RACK_NAMES.material[r.material],
-    r.dividers ? 'plates upright' : 'plates flat',
-    r.dripTray ? 'drip tray' : 'no drip tray',
-    r.cup === 'none' ? 'spoons on base' : r.cup === 'solid' ? 'solid cup' : 'perforated cup',
-  ].join(' · ');
+
+  // Keys 1–6 open a part; Esc closes it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'Escape') return setOpenKey(null);
+      const n = Number(e.key);
+      if (n >= 1 && n <= PART_KEYS.length) setOpenKey((k) => (k === PART_KEYS[n - 1] ? null : PART_KEYS[n - 1]));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
-    <div className={`rack-parts ${open ? '' : 'folded'}`}>
-      <div className="rack-parts-head">
-        <button className="rack-parts-toggle" onClick={() => setOpen(!open)} aria-expanded={open} title={open ? 'Hide the parts' : 'Show the parts'}>
-          <span className="rack-parts-title">Build your rack</span>
-          <span className="fold-chev" aria-hidden>{open ? '▾' : '▸'}</span>
-        </button>
-        <span className="rack-parts-actions">
+    <div className="hud bottom-center">
+      {open && (
+        <div className="rack-drawer blueprint">
+          <div className="rack-drawer-head">
+            <span className="rack-drawer-title">
+              {open.icon} {open.title}
+            </span>
+            <button className="results-close" onClick={() => setOpenKey(null)} aria-label="Close" title="Close (Esc)">
+              ✕
+            </button>
+          </div>
+          <div className="rack-drawer-choices" role="radiogroup" aria-label={open.title}>
+            {open.choices.map((c) => (
+              <button key={c.label} role="radio" aria-checked={c.on} className={`choice ${c.on ? 'on' : ''}`} onClick={c.pick}>
+                <span>{c.label}</span>
+                <span className="choice-cost">{inr(c.cost)}</span>
+              </button>
+            ))}
+          </div>
+          <p className="part-info">{open.info}</p>
+        </div>
+      )}
+
+      <div className="toolbar blueprint">
+        {parts.map((p, i) => (
+          <button
+            key={p.key}
+            className={`tool rack-tool ${openKey === p.key ? 'active' : ''}`}
+            onClick={() => setOpenKey(openKey === p.key ? null : p.key)}
+            title={`${p.title}: click to see the options (shortcut: ${i + 1})`}
+          >
+            <span className="tool-icon">{p.icon}</span>
+            <span className="rack-tool-part">{p.title}</span>
+            <span className="tool-name">{p.current}</span>
+            <span className="tool-cost">{inr(p.cost)}</span>
+          </button>
+        ))}
+        <div className="tool-side grid">
           <button className="btn ghost small" onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">
             ↶ Undo
           </button>
-          <button className="btn ghost small" onClick={clearDesign} disabled={isDefault}>
-            Reset
+          <button className="btn ghost small" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">
+            ↷ Redo
           </button>
-        </span>
+          <button className="btn ghost small span-2" onClick={clearDesign} disabled={isDefault}>
+            Reset rack
+          </button>
+        </div>
       </div>
-
-      {open ? (
-        <>
-        <Part
-          n={1}
-          title="Base surface"
-          value={r.base}
-          onPick={(base) => set({ base })}
-          choices={RACK_BASES.map((b) => ({ value: b, label: RACK_NAMES.base[b], cost: RACK_PRICES.base[b] }))}
-          info={BASE_INFO[r.base]}
-        />
-        <Part
-          n={2}
-          title="Opening size"
-          value={r.gap}
-          onPick={(gap) => set({ gap })}
-          choices={RACK_GAPS.map((g) => ({ value: g, label: `${g} mm` }))}
-          info={
-            r.base === 'tray'
-              ? `A solid tray has no openings. This size still sets how far apart plates stand in dividers (${r.gap} mm).`
-              : GAP_INFO[r.gap]
-          }
-        />
-        <Part
-          n={3}
-          title="Frame material"
-          value={r.material}
-          onPick={(material) => set({ material })}
-          choices={RACK_MATERIALS.map((m) => ({ value: m, label: RACK_NAMES.material[m] }))}
-          info={MATERIAL_INFO[r.material]}
-        />
-        <Part
-          n={4}
-          title="Plates"
-          value={r.dividers}
-          onPick={(dividers) => set({ dividers })}
-          choices={[
-            { value: false, label: 'Lying flat', cost: 0 },
-            { value: true, label: 'Upright in dividers', cost: RACK_PRICES.dividers },
-          ]}
-          info={r.dividers ? PLATES_INFO.upright : PLATES_INFO.flat}
-        />
-        <Part
-          n={5}
-          title="Under the rack"
-          value={r.dripTray}
-          onPick={(dripTray) => set({ dripTray })}
-          choices={[
-            { value: false, label: 'Nothing', cost: 0 },
-            { value: true, label: 'Drip tray', cost: RACK_PRICES.dripTray },
-          ]}
-          info={r.dripTray ? UNDER_INFO.tray : UNDER_INFO.none}
-        />
-        <Part
-          n={6}
-          title="Spoons"
-          value={r.cup}
-          onPick={(cup) => set({ cup })}
-          choices={RACK_CUPS.map((c) => ({
-            value: c,
-            label: c === 'none' ? 'On the base' : c === 'solid' ? 'Solid cup' : 'Perforated cup',
-            cost: RACK_PRICES.cup[c],
-          }))}
-          info={CUP_INFO[r.cup]}
-        />
-        </>
-      ) : (
-        <p className="rack-summary">{summary}</p>
-      )}
+      <div className="controls-hint">Click a part to see its options · 1–6: parts · Ctrl+Z: undo · right drag: pan · scroll: zoom</div>
     </div>
   );
 }

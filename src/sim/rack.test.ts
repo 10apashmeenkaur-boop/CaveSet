@@ -46,17 +46,17 @@ describe('Object 1: The Utensil Rack', () => {
     expect(perforated.result.passed).toBe(true);
   });
 
-  it('pass A: wire mesh, 20 mm, dividers, drip tray, perforated cup is the cheapest clean design, for 3 stars', () => {
+  it('pass A: wire mesh, 20 mm, dividers, drip tray, perforated cup passes; with stainless it costs more than the 3-star target', () => {
     const { sim, result, cost } = run({ ...GOOD, gap: 20, cup: 'perforated' });
-    expect(cost).toBe(1050);
+    expect(cost).toBe(1560); // mesh 500 + 20 mm 60 + stainless 450 + dividers 200 + drip tray 200 + perforated cup 150
     expect(sim.delivered).toBe(40);
     expect(sim.incidents).toEqual([]);
-    expect(result.stars).toBe(3);
+    expect(result.stars).toBe(2);
   });
 
   it('pass B: a perforated sheet with 35 mm holes passes too, slower and dearer', () => {
     const { result, cost } = run({ ...GOOD, base: 'perforated', gap: 35, cup: 'perforated' });
-    expect(cost).toBe(1150);
+    expect(cost).toBe(1640); // perforated 600 + 35 mm 40 + stainless 450 + 550 extras
     expect(result.passed).toBe(true);
     expect(result.stars).toBe(2);
   });
@@ -119,5 +119,17 @@ describe('Utensil Rack example answer', () => {
     expect(sim.incidents).toEqual([]);
     expect(result.passed).toBe(true);
     expect(result.stars).toBe(3);
+  });
+});
+
+describe('Utensil Rack prices', () => {
+  it('opening size and material have their own prices; a solid tray has no opening cost', () => {
+    expect(run({ base: 'mesh', gap: 5 }).cost - run({ base: 'mesh', gap: 35 }).cost).toBe(110);
+    expect(run({ material: 'stainless' }).cost - run({ material: 'plastic' }).cost).toBe(300);
+    expect(run({ base: 'tray', gap: 5 }).cost).toBe(run({ base: 'tray', gap: 35 }).cost);
+  });
+  it('the cheapest clean rack (plastic frame) is the example, and earns three stars under starCost', () => {
+    expect(run(RACK_EXAMPLE).cost).toBe(1260);
+    expect(run(RACK_EXAMPLE).cost).toBeLessThanOrEqual(RACK.starCost!);
   });
 });

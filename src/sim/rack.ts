@@ -54,13 +54,22 @@ export const RACK_NAMES = {
 
 export const RACK_PRICES = {
   base: { tray: 300, perforated: 600, mesh: 500 },
+  /** Finer openings take more punching or more wire, so they cost more. A solid tray has none. */
+  gap: { 5: 150, 10: 100, 20: 60, 35: 40 },
+  /** Frame material: stainless steel is dearest, moulded plastic cheapest. */
+  material: { plastic: 150, aluminium: 300, stainless: 450, mildSteel: 200 },
   dividers: 200,
   dripTray: 200,
   cup: { none: 0, solid: 100, perforated: 150 },
 } as const;
 
+/** What the opening size adds: nothing on a solid tray, which has no openings. */
+export function gapCost(r: RackDesign): number {
+  return r.base === 'tray' ? 0 : RACK_PRICES.gap[r.gap];
+}
+
 export function rackCost(r: RackDesign): number {
-  return RACK_PRICES.base[r.base] + (r.dividers ? RACK_PRICES.dividers : 0) + (r.dripTray ? RACK_PRICES.dripTray : 0) + RACK_PRICES.cup[r.cup];
+  return RACK_PRICES.base[r.base] + gapCost(r) + RACK_PRICES.material[r.material] + (r.dividers ? RACK_PRICES.dividers : 0) + (r.dripTray ? RACK_PRICES.dripTray : 0) + RACK_PRICES.cup[r.cup];
 }
 
 export type UtensilKind = 'plate' | 'bowl' | 'spoon';
@@ -235,13 +244,13 @@ export function rackSheet(level: Level, r: RackDesign): RackSheet {
 
 /**
  * One rack that passes, and why each part works. Shown only after a failed run (fail first, learn after).
- * Wire mesh at 20 mm, upright plates, a drip tray, a perforated cutlery cup and a stainless steel frame.
+ * Wire mesh at 20 mm, upright plates, a drip tray, a perforated cutlery cup and a plastic frame (the cheapest clean rack).
  */
-export const RACK_EXAMPLE: RackDesign = { base: 'mesh', gap: 20, material: 'stainless', dividers: true, dripTray: true, cup: 'perforated' };
+export const RACK_EXAMPLE: RackDesign = { base: 'mesh', gap: 20, material: 'plastic', dividers: true, dripTray: true, cup: 'perforated' };
 export const RACK_EXAMPLE_WHY: { part: string; why: string }[] = [
   { part: 'Wire mesh, 20 mm', why: 'About 75% open: water drops straight through and air rises from below.' },
   { part: 'Plates upright in dividers', why: 'Both faces of every plate are in moving air, and water runs off the edge.' },
   { part: 'Perforated cutlery cup', why: 'Spoons are narrower than 20 mm and would slip through the mesh. The cup holds them, and its holes let water out.' },
   { part: 'Drip tray', why: 'Water that drains through the mesh lands in the tray, not on the counter.' },
-  { part: 'Stainless steel frame', why: 'Stiff enough for about 5.5 kg of wet dishes, and it does not rust. Plastic also works.' },
+  { part: 'Plastic frame', why: 'Thick moulded ribs are stiff enough for about 5.5 kg of wet dishes, it never rusts, and it is the cheapest. Stainless steel also works but costs more.' },
 ];
