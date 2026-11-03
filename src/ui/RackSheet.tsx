@@ -1,6 +1,8 @@
 import { DEFAULT_RACK, rackSheet } from '../sim/rack';
 import type { Level } from '../sim/types';
 import { useStore } from '../store';
+import { Fold } from './Fold';
+import { EXPERIMENTS, GLOSSARY } from './rackText';
 
 function Bar({ value }: { value: number }) {
   return (
@@ -19,8 +21,7 @@ export function RackSheetCard({ level }: { level: Level }) {
   const s = rackSheet(level, rack);
   const m = s.material;
   return (
-    <section className="sheet blueprint" aria-label="Design sheet">
-      <h3>Design sheet</h3>
+    <Fold title="Design sheet" className="sheet blueprint">
       <dl>
         <dt>Surface</dt>
         <dd>
@@ -55,6 +56,28 @@ export function RackSheetCard({ level }: { level: Level }) {
         <dt>Water</dt>
         <dd>{s.waterPath}</dd>
       </dl>
-    </section>
+    </Fold>
+  );
+}
+
+/** Technical words used on the level, in plain English, plus experiments worth trying. Closed until opened. */
+export function DictionaryCard() {
+  return (
+    <Fold title="📖 Dictionary" defaultOpen={false} className="sheet dictionary blueprint">
+      <dl className="glossary">
+        {GLOSSARY.map((g) => (
+          <div key={g.term}>
+            <dt>{g.term}</dt>
+            <dd>{g.meaning}</dd>
+          </div>
+        ))}
+      </dl>
+      <h4>Experiments to try</h4>
+      <ul className="experiments">
+        {EXPERIMENTS.map((e) => (
+          <li key={e}>{e}</li>
+        ))}
+      </ul>
+    </Fold>
   );
 }

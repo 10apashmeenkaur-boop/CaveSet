@@ -24,7 +24,7 @@ const ICON: Record<ToolId, string> = {
 export const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 export function Toolbar({ level }: { level: Level }) {
-  const { tool, setTool, rotate, orientIdx, slopeIdx, rampDir, clearDesign, design, hover } = useStore();
+  const { tool, setTool, rotate, orientIdx, slopeIdx, rampDir, clearDesign, design, hover, undo, redo, past, future } = useStore();
   const tools = useMemo<ToolId[]>(() => [...level.allowedTools, 'eraser'], [level]);
   const [orient, swing] = orientationOf(orientIdx);
   const isDoor = tool !== 'eraser' && TOOL_INFO[tool].door;
@@ -82,6 +82,14 @@ export function Toolbar({ level }: { level: Level }) {
                       ? `⟳ Up ${arrow}`
                       : '⟳ Rotate'}
           </button>
+          <div className="undo-row">
+            <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (Ctrl+Z)">
+              ↶ Undo
+            </button>
+            <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (Ctrl+Y)">
+              ↷
+            </button>
+          </div>
           <button className="btn ghost small" onClick={clearDesign} disabled={!design.items.length}>
             Clear all
           </button>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { costOf, EMPTY_DESIGN } from './design';
-import { DEFAULT_RACK, rackSheet, type RackDesign } from './rack';
+import { DEFAULT_RACK, RACK_EXAMPLE, rackSheet, type RackDesign } from './rack';
 import { score } from './scoring';
 import { runToEnd } from './simulate';
 import { LEVELS } from '../levels';
@@ -110,5 +110,14 @@ describe('Utensil Rack design sheet', () => {
   it('water goes to the drip tray when there is one, else the counter', () => {
     expect(sheet({ base: 'mesh', dripTray: true }).waterPath).toContain('drip tray');
     expect(sheet({ base: 'mesh', dripTray: false }).waterPath).toContain('counter');
+  });
+});
+
+describe('Utensil Rack example answer', () => {
+  it('the design shown after a failed run really passes with three stars', () => {
+    const { sim, result } = run(RACK_EXAMPLE);
+    expect(sim.incidents).toEqual([]);
+    expect(result.passed).toBe(true);
+    expect(result.stars).toBe(3);
   });
 });

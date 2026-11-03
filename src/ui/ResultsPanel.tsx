@@ -5,6 +5,8 @@ import { score } from '../sim/scoring';
 import type { Level } from '../sim/types';
 import { useStore } from '../store';
 import { quoteFor } from './quotes';
+import { Fold } from './Fold';
+import { RACK_EXAMPLE, RACK_EXAMPLE_WHY } from '../sim/rack';
 
 function Stars({ n }: { n: number }) {
   return (
@@ -24,7 +26,16 @@ export function ResultsPanel({ level }: { level: Level }) {
   const { setFocus, backToDesign, openLevel, goTo } = useStore.getState();
   // The panel can be tucked away to look at the scene; a small tab brings it back.
   const [open, setOpen] = useState(true);
+  // Incident cards fold: the first one starts open, the rest show just their title until clicked.
+  const [expanded, setExpanded] = useState<Set<number>>(() => new Set([0]));
   if (!sim) return null;
+  const toggle = (i: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
 
   const sandbox = !Number.isFinite(level.budget);
   const r = score(level, sim, costOf(design));
@@ -52,6 +63,7 @@ export function ResultsPanel({ level }: { level: Level }) {
       </header>
 
       {!sandbox && (
+        <Fold title="Scorecard" className="results-fold">
         <ul className="checks">
           {r.checks.map((c) => (
             <li key={c.label} className={c.ok ? 'ok' : 'no'}>
@@ -74,6 +86,7 @@ export function ResultsPanel({ level }: { level: Level }) {
           </li>
           )}
         </ul>
+        </Fold>
       )}
 
       {sim.incidents.length > 0 ? (
@@ -82,23 +95,56 @@ export function ResultsPanel({ level }: { level: Level }) {
           <div className="incident-cards">
             {sim.incidents.map((inc, i) => {
               const said = quoteFor(inc.code, `${inc.code}-${inc.tick}`);
+              const isOpen = expanded.has(i);
               return (
                 <button
                   key={`${inc.code}-${inc.tick}`}
-                  className={`incident-card ${focus === i ? 'focused' : ''}`}
-                  onClick={() => setFocus(focus === i ? null : i)}
+                  className={`incident-card ${focus === i ? 'focused' : ''} ${isOpen ? '' : 'folded'}`}
+                  onClick={() => {
+                    toggle(i);
+                    setFocus(focus === i ? null : i);
+                  }}
+                  aria-expanded={isOpen}
                 >
-                  <span className="code">{inc.code.replace(/_/g, ' ')}</span>
+                  <span className="code">
+                    {inc.code.replace(/_/g, ' ')}
+                    <span className="fold-chev" aria-hidden>{isOpen ? '▾' : '▸'}</span>
+                  </span>
                   <strong>{inc.title}</strong>
-                  <span className="evidence">{inc.evidence}</span>
-                  {said && <span className="said">“{said}”</span>}
-                  <span className="principle">{inc.principle}</span>
-                  <span className="hint">💡 {inc.hint}</span>
+                  {isOpen && (
+                    <>
+                      <span className="evidence">{inc.evidence}</span>
+                      {said && <span className="said">“{said}”</span>}
+                      <span className="principle">{inc.principle}</span>
+                      <span className="hint">💡 {inc.hint}</span>
+                    </>
+                  )}
                 </button>
               );
             })}
+            {level.rack && !r.passed && (
+              <Fold title="✅ A design that works" defaultOpen={false} className="answer">
+                <ul className="answer-list">
+                  {RACK_EXAMPLE_WHY.map((w) => (
+                    <li key={w.part}>
+                      <strong>{w.part}</strong>
+                      <span>{w.why}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  className="btn small"
+                  onClick={() => {
+                    useStore.getState().setRack(RACK_EXAMPLE);
+                    backToDesign();
+                  }}
+                >
+                  Try this design
+                </button>
+              </Fold>
+            )}
           </div>
-          <p className="cards-tip">Click a card to see where it happened.</p>
+          <p className="cards-tip">Click a card to open it and see where it happened.</p>
         </>
       ) : (
         <p className="clean">No incidents. Everything ran smoothly and nobody complained.</p>

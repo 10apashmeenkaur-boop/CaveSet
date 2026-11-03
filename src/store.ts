@@ -93,6 +93,13 @@ type Store = {
   clearDesign: () => void;
   /** Utensil Rack level: change part of the rack. */
   setRack: (change: Partial<RackDesign>) => void;
+  /** Undo / redo: earlier and undone designs on this level. One drag or click is one step. */
+  past: Design[];
+  future: Design[];
+  undo: () => void;
+  redo: () => void;
+  /** Ends the current pointer gesture, so the next change starts a new undo step. */
+  endDrag: () => void;
 
   // Simulation
   mode: 'design' | 'sim';
@@ -130,30 +137,42 @@ function unlock(set: (fn: (s: Store) => Partial<Store>) => void, codes: string[]
   });
 }
 
+/** How many undo steps are kept. */
+const HISTORY_MAX = 100;
+/** The pointer gesture in progress: every change during one drag (or click) is a single undo step. */
+let gesture = { open: false, recorded: false };
+/** Set while undo/redo swaps the design in, so that swap isn't recorded as a new step. */
+const history = { applying: false, reset: false };
+
 export const useStore = create<Store>((set, get) => ({
   screen: 'levels',
   levelId: null,
   progress: loadProgress(),
   openLevel: (id) =>
-    set({
-      screen: 'game',
-      levelId: id,
-      design: startDesign(id),
-      tool: findLevel(id)?.allowedTools[0] ?? 'wall',
-      orientIdx: 0,
-      slopeIdx: 0,
-      rampDir: [-1, 0],
-      lastPaint: null,
-      dragStart: null,
-      hover: null,
-      mode: 'design',
-      sim: null,
-      world: null,
-      running: false,
-      notice: null,
-      focus: null,
-      ghostSim: null,
-      ghostWorld: null,
+    set(() => {
+      history.reset = true;
+      return {
+        screen: 'game',
+        levelId: id,
+        past: [],
+        future: [],
+        design: startDesign(id),
+        tool: findLevel(id)?.allowedTools[0] ?? 'wall',
+        orientIdx: 0,
+        slopeIdx: 0,
+        rampDir: [-1, 0],
+        lastPaint: null,
+        dragStart: null,
+        hover: null,
+        mode: 'design',
+        sim: null,
+        world: null,
+        running: false,
+        notice: null,
+        focus: null,
+        ghostSim: null,
+        ghostWorld: null,
+      };
     }),
   goTo: (screen) => set({ screen }),
   setProgress: (fn) =>
@@ -170,7 +189,27 @@ export const useStore = create<Store>((set, get) => ({
   rampDir: [-1, 0],
   lastPaint: null,
   dragStart: null,
-  startDrag: () => set({ lastPaint: null, dragStart: null }),
+  startDrag: () => {
+    gesture = { open: true, recorded: false };
+    set({ lastPaint: null, dragStart: null });
+  },
+  endDrag: () => {
+    gesture = { open: false, recorded: false };
+  },
+  past: [],
+  future: [],
+  undo: () =>
+    set((s) => {
+      if (s.mode !== 'design' || !s.past.length) return {};
+      history.applying = true;
+      return { design: s.past[s.past.length - 1], past: s.past.slice(0, -1), future: [s.design, ...s.future].slice(0, HISTORY_MAX), notice: null };
+    }),
+  redo: () =>
+    set((s) => {
+      if (s.mode !== 'design' || !s.future.length) return {};
+      history.applying = true;
+      return { design: s.future[0], future: s.future.slice(1), past: [...s.past, s.design].slice(-HISTORY_MAX), notice: null };
+    }),
   hover: null,
   setTool: (tool) => set({ tool }),
   rotate: () =>
@@ -372,3 +411,22 @@ export function resolveDraft(
 export function orientationOf(orientIdx: number) {
   return ORIENTATIONS[orientIdx];
 }
+
+// Record undo steps: whenever the design changes (outside undo/redo), keep the previous one.
+// Opening a level starts a fresh history. A whole drag counts as one step.
+useStore.subscribe((s, prev) => {
+  if (history.reset) {
+    history.reset = false;
+    return;
+  }
+  if (s.design === prev.design) return;
+  if (history.applying) {
+    history.applying = false;
+    return;
+  }
+  if (gesture.open) {
+    if (gesture.recorded) return;
+    gesture.recorded = true;
+  }
+  useStore.setState({ past: [...s.past, prev.design].slice(-HISTORY_MAX), future: [] });
+});

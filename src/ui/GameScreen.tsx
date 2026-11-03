@@ -6,8 +6,8 @@ import { BudgetBar } from './BudgetBar';
 import { MistriCard } from './QuoteBanner';
 import { ResultsPanel } from './ResultsPanel';
 import { SimBar } from './SimBar';
-import { RackToolbar } from './RackToolbar';
-import { RackSheetCard } from './RackSheet';
+import { RackParts } from './RackParts';
+import { DictionaryCard, RackSheetCard } from './RackSheet';
 import { Toolbar } from './Toolbar';
 
 export function GameScreen() {
@@ -21,6 +21,14 @@ export function GameScreen() {
   // Space: start / pause / resume.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Ctrl+Z undo, Ctrl+Y or Ctrl+Shift+Z redo (Cmd on Mac).
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault();
+        const s = useStore.getState();
+        if (e.key === 'y' || e.key === 'Y' || e.shiftKey) s.redo();
+        else s.undo();
+        return;
+      }
       if (e.code !== 'Space') return;
       e.preventDefault();
       const s = useStore.getState();
@@ -37,27 +45,30 @@ export function GameScreen() {
     <div className="game">
       <Scene level={level} />
 
-      <div className="hud top-left blueprint">
+      <div className={`hud top-left blueprint ${level.rack ? 'with-parts' : ''}`}>
         <button className="btn ghost small" onClick={() => goTo('levels')}>
           ← Levels
         </button>
         <h2>{level.title}</h2>
         <p>{level.brief}</p>
+        {/* The Utensil Rack is built from this panel: every option visible, each explained. */}
+        {level.rack && mode === 'design' && <RackParts />}
       </div>
 
       {ended ? (
         <ResultsPanel level={level} />
       ) : (
-        <div className="hud top-right">
+        <div className={`hud top-right ${level.rack ? 'scroll' : ''}`}>
           <BudgetBar level={level} />
           <MistriCard level={level} />
           {level.rack && <RackSheetCard level={level} />}
+          {level.rack && <DictionaryCard />}
         </div>
       )}
 
       {mode === 'design' ? (
         <>
-          {level.rack ? <RackToolbar /> : <Toolbar level={level} />}
+          {!level.rack && <Toolbar level={level} />}
           <div className="hud bottom-right">
             <SimBar level={level} />
           </div>

@@ -146,7 +146,7 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .budget.over .budget-fill { background: #e5675a; }
 /* Utensil Rack design sheet (top-right, under the Master Builder) */
 .sheet { padding: 12px 16px; }
-.sheet h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink-soft); margin: 0 0 6px; }
+
 .sheet dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 14px; }
 .sheet dt { color: var(--ink-soft); font-size: 13px; padding-top: 1px; }
 .sheet dd { margin: 0; color: var(--ink); font-weight: 600; display: flex; flex-direction: column; gap: 2px; }
@@ -469,3 +469,59 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
   white-space: nowrap;
   user-select: none;
 }
+
+
+/* Collapsible sections (Design sheet, Dictionary, results) */
+.fold-head {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none;
+  font: inherit; color: var(--ink-soft); cursor: pointer; text-align: left;
+}
+.fold-title { flex: 1; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
+.fold-chev { font-size: 13px; color: var(--ink-soft); margin-left: 6px; }
+.fold.open .fold-body { margin-top: 8px; }
+.sheet.closed { padding-bottom: 10px; }
+
+/* Dictionary */
+.dictionary .fold-body { max-height: 46vh; overflow-y: auto; padding-right: 4px; }
+.sheet dl.glossary { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.glossary dt { font-weight: 600; color: var(--ink); font-size: 14px; }
+.glossary dd { margin: 2px 0 0; font-size: 13px; color: var(--ink-soft); line-height: 1.4; font-weight: 400; }
+.dictionary h4 { margin: 12px 0 4px; font-size: 13px; color: var(--ink); }
+.experiments { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-soft); line-height: 1.4; display: flex; flex-direction: column; gap: 4px; }
+
+/* Right column scrolls on the rack level so cards never run under the Simulate button */
+.hud.top-right.scroll { max-height: calc(100vh - 120px); overflow-y: auto; padding-bottom: 6px; }
+
+/* Utensil Rack build panel (inside the brief card, left) */
+.hud.top-left.with-parts { width: min(380px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.rack-parts { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 4px; padding-top: 10px; border-top: 2px dashed rgba(35, 57, 91, 0.25); }
+.rack-parts-head { display: flex; justify-content: space-between; align-items: center; }
+.rack-parts-head h3 { font-size: 17px; margin: 0; }
+.part-title { font-size: 13px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.part-n { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--ink); display: inline-grid; place-items: center; font-size: 11px; background: #fff; }
+.part-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.choice {
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: #fff;
+  border: 2px solid var(--ink); border-radius: 10px; padding: 4px 9px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;
+  box-shadow: 0 2px 0 var(--ink); transition: transform 0.08s, box-shadow 0.08s;
+}
+.choice.on { background: var(--accent); transform: translateY(2px); box-shadow: 0 0 0 var(--ink); }
+.choice-cost { font-size: 11px; font-weight: 500; color: var(--ink-soft); }
+.choice.on .choice-cost { color: var(--accent-ink); }
+.part-info { margin-top: 5px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.4; }
+
+/* Results: folded incident cards and the worked answer */
+.incident-card .code { display: flex; justify-content: space-between; align-items: center; }
+.incident-card.folded { gap: 2px; }
+.results-fold .fold-body { margin-top: 6px; }
+.answer { background: #f2fbf4; border: 2px solid var(--ink); border-left: 8px solid #3fa463; border-radius: 12px; padding: 10px 12px; }
+.answer .fold-title { color: #23683b; }
+.answer-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.answer-list li { display: flex; flex-direction: column; font-size: 13px; color: var(--ink-soft); }
+.answer-list strong { color: var(--ink); font-size: 14px; }
+
+/* Undo / redo */
+.undo-row { display: flex; gap: 6px; }
+.undo-row .btn:last-child { padding: 4px 10px; }
+.rack-parts-actions { display: flex; gap: 6px; }

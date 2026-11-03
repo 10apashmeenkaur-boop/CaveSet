@@ -232,3 +232,16 @@ export function rackSheet(level: Level, r: RackDesign): RackSheet {
     waterPath: r.base === 'tray' ? 'Utensils → base (no way down)' : `Utensils → base → ${below}`,
   };
 }
+
+/**
+ * One rack that passes, and why each part works. Shown only after a failed run (fail first, learn after).
+ * Wire mesh at 20 mm, upright plates, a drip tray, a perforated cutlery cup and a stainless steel frame.
+ */
+export const RACK_EXAMPLE: RackDesign = { base: 'mesh', gap: 20, material: 'stainless', dividers: true, dripTray: true, cup: 'perforated' };
+export const RACK_EXAMPLE_WHY: { part: string; why: string }[] = [
+  { part: 'Wire mesh, 20 mm', why: 'About 75% open: water drops straight through and air rises from below.' },
+  { part: 'Plates upright in dividers', why: 'Both faces of every plate are in moving air, and water runs off the edge.' },
+  { part: 'Perforated cutlery cup', why: 'Spoons are narrower than 20 mm and would slip through the mesh. The cup holds them, and its holes let water out.' },
+  { part: 'Drip tray', why: 'Water that drains through the mesh lands in the tray, not on the counter.' },
+  { part: 'Stainless steel frame', why: 'Stiff enough for about 5.5 kg of wet dishes, and it does not rust. Plastic also works.' },
+];

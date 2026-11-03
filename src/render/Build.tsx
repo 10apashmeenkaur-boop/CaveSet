@@ -172,7 +172,11 @@ export function InteractionPlane({ level }: { level: Level }) {
 
   // Releasing the mouse outside the canvas still ends a drag.
   useEffect(() => {
-    const stop = () => (painting.current = null);
+    const stop = () => {
+      painting.current = null;
+      // The drag (or click) is over: the next change is a new undo step.
+      useStore.getState().endDrag();
+    };
     window.addEventListener('pointerup', stop);
     return () => window.removeEventListener('pointerup', stop);
   }, []);
