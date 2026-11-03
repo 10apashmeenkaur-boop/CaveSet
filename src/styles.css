@@ -521,7 +521,7 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .answer-list li { display: flex; flex-direction: column; font-size: 13px; color: var(--ink-soft); }
 .answer-list strong { color: var(--ink); font-size: 14px; }
 
-/* Undo / redo */
-.undo-row { display: flex; gap: 6px; }
-.undo-row .btn:last-child { padding: 4px 10px; }
+/* Toolbar side buttons: a tidy 2 × 2 grid of equal buttons */
+.tool-side.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; align-content: center; }
+.tool-side.grid .btn { width: 100%; white-space: nowrap; text-align: center; padding: 6px 10px; }
 .rack-parts-actions { display: flex; gap: 6px; }

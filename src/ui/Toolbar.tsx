@@ -68,7 +68,8 @@ export function Toolbar({ level }: { level: Level }) {
             <span className="tool-cost">{t === 'eraser' ? 'refund' : inr(TOOL_INFO[t as BuildTool].cost)}</span>
           </button>
         ))}
-        <div className="tool-side">
+        {/* 2 × 2: flip/rotate and clear on top, undo and redo below. Same size, same height as before. */}
+        <div className="tool-side grid">
           <button className="btn ghost small" onClick={rotate} disabled={!isDoor && !isSign && !isStation && !isRamp && !isStairs} title="Shortcut: R">
             {isSign
               ? '⟳ Flip arrow'
@@ -82,16 +83,14 @@ export function Toolbar({ level }: { level: Level }) {
                       ? `⟳ Up ${arrow}`
                       : '⟳ Rotate'}
           </button>
-          <div className="undo-row">
-            <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (Ctrl+Z)">
-              ↶ Undo
-            </button>
-            <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (Ctrl+Y)">
-              ↷
-            </button>
-          </div>
           <button className="btn ghost small" onClick={clearDesign} disabled={!design.items.length}>
             Clear all
+          </button>
+          <button className="btn ghost small" onClick={undo} disabled={!past.length} title="Undo (Ctrl+Z)">
+            ↶ Undo
+          </button>
+          <button className="btn ghost small" onClick={redo} disabled={!future.length} title="Redo (Ctrl+Y)">
+            ↷ Redo
           </button>
         </div>
       </div>
