@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { LEVELS } from '../levels';
 import { costOf } from '../sim/design';
 import { score } from '../sim/scoring';
@@ -21,17 +22,33 @@ export function ResultsPanel({ level }: { level: Level }) {
   const design = useStore((s) => s.design);
   const focus = useStore((s) => s.focus);
   const { setFocus, backToDesign, openLevel, goTo } = useStore.getState();
+  // The panel can be tucked away to look at the scene; a small tab brings it back.
+  const [open, setOpen] = useState(true);
   if (!sim) return null;
 
   const sandbox = !Number.isFinite(level.budget);
   const r = score(level, sim, costOf(design));
   const next = LEVELS[LEVELS.findIndex((l) => l.id === level.id) + 1];
 
+  const title = sandbox ? 'Sandbox run' : r.passed ? 'Service complete' : 'Not quite yet';
+  if (!open) {
+    return (
+      <button className="results-tab blueprint" onClick={() => setOpen(true)} title="Show the results again">
+        <span>{title}</span>
+        {!sandbox && <Stars n={r.stars} />}
+        <span className="results-tab-open">Show results ◂</span>
+      </button>
+    );
+  }
+
   return (
     <aside className="results blueprint">
       <header>
-        <h2>{sandbox ? 'Sandbox run' : r.passed ? 'Service complete' : 'Not quite yet'}</h2>
+        <h2>{title}</h2>
         {!sandbox && <Stars n={r.stars} />}
+        <button className="results-close" onClick={() => setOpen(false)} title="Hide results to see the scene" aria-label="Hide results">
+          ✕
+        </button>
       </header>
 
       {!sandbox && (

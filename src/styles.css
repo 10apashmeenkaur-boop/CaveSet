@@ -144,6 +144,16 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 .budget-fill { height: 100%; background: #6cc48a; transition: width 0.2s, background 0.2s; }
 .budget-note { font-size: 13px; color: var(--ink-soft); }
 .budget.over .budget-fill { background: #e5675a; }
+/* Utensil Rack design sheet (top-right, under the Master Builder) */
+.sheet { padding: 12px 16px; }
+.sheet h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--ink-soft); margin: 0 0 6px; }
+.sheet dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 14px; }
+.sheet dt { color: var(--ink-soft); font-size: 13px; padding-top: 1px; }
+.sheet dd { margin: 0; color: var(--ink); font-weight: 600; display: flex; flex-direction: column; gap: 2px; }
+.sheet-sub { font-weight: 400; font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
+.sheet-sub.muted { font-size: 12px; opacity: 0.8; }
+.sheet-bar { display: inline-block; width: 60px; height: 8px; border: 1.5px solid var(--ink); border-radius: 999px; background: #fff; overflow: hidden; }
+.sheet-bar span { display: block; height: 100%; background: #6cb4d9; }
 .budget.over .budget-note { color: #c0392b; font-weight: 600; }
 
 /* Toolbar */
@@ -315,6 +325,19 @@ button.card:hover:not(:disabled) { transform: translateY(-3px) rotate(-0.4deg); 
 }
 .results header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .results h2 { font-size: 26px; }
+.results-close {
+  margin-left: 4px; flex: none; width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid var(--ink); background: #fff; color: var(--ink);
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; line-height: 1;
+}
+.results-close:hover { background: var(--ink); color: #fff; }
+.results-tab {
+  position: absolute; z-index: 2; top: 16px; right: 16px;
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+  font: inherit; font-weight: 600; color: var(--ink); cursor: pointer;
+}
+.results-tab .result-stars { font-size: 20px; }
+.results-tab-open { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
 .result-stars { font-size: 30px; letter-spacing: 2px; color: #d9d3c7; }
 .result-stars .on { color: #f2b33d; text-shadow: 0 2px 0 #b9811b; }
 .checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }

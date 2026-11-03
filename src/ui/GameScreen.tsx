@@ -7,6 +7,7 @@ import { MistriCard } from './QuoteBanner';
 import { ResultsPanel } from './ResultsPanel';
 import { SimBar } from './SimBar';
 import { RackToolbar } from './RackToolbar';
+import { RackSheetCard } from './RackSheet';
 import { Toolbar } from './Toolbar';
 
 export function GameScreen() {
@@ -50,6 +51,7 @@ export function GameScreen() {
         <div className="hud top-right">
           <BudgetBar level={level} />
           <MistriCard level={level} />
+          {level.rack && <RackSheetCard level={level} />}
         </div>
       )}
 

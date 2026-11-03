@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { costOf, EMPTY_DESIGN } from './design';
-import { DEFAULT_RACK, type RackDesign } from './rack';
+import { DEFAULT_RACK, rackSheet, type RackDesign } from './rack';
 import { score } from './scoring';
 import { runToEnd } from './simulate';
 import { LEVELS } from '../levels';
@@ -83,5 +83,32 @@ describe('Object 1: The Utensil Rack', () => {
 
   it('even the dearest rack is within budget', () => {
     expect(run({ ...GOOD, base: 'perforated', cup: 'perforated' }).cost).toBeLessThanOrEqual(RACK.budget);
+  });
+});
+
+describe('Utensil Rack design sheet', () => {
+  const sheet = (r: Partial<RackDesign>) => rackSheet(RACK, { ...DEFAULT_RACK, ...r });
+
+  it('a solid tray has no open area and no way down for the water', () => {
+    const s = sheet({});
+    expect(s.openArea).toBe(0);
+    expect(s.waterPath).toContain('no way down');
+  });
+
+  it('upright plates put far more plate surface in the air than flat piles', () => {
+    const flat = sheet({ dividers: false });
+    const upright = sheet({ dividers: true });
+    expect(upright.plateAirM2).toBeCloseTo(upright.plateTotalM2);
+    expect(flat.plateAirM2).toBeLessThan(upright.plateAirM2 / 5);
+    expect(upright.plateTotalM2).toBeCloseTo(1.39, 1);
+  });
+
+  it('wet load counts every utensil and the water on it', () => {
+    expect(sheet({}).wetLoadKg).toBeCloseTo(5.49, 2);
+  });
+
+  it('water goes to the drip tray when there is one, else the counter', () => {
+    expect(sheet({ base: 'mesh', dripTray: true }).waterPath).toContain('drip tray');
+    expect(sheet({ base: 'mesh', dripTray: false }).waterPath).toContain('counter');
   });
 });

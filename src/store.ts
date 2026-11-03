@@ -9,6 +9,7 @@ import {
   eraseTarget,
   isEditable,
   place,
+  signOn,
   snapSign,
   TOOL_INFO,
   upDir,
@@ -186,6 +187,13 @@ export const useStore = create<Store>((set, get) => ({
     const level = levelId ? findLevel(levelId) : undefined;
     if (!level || tool === 'eraser') return;
     if (tool === 'ramp') return paintRamp(level, x, y);
+    // Clicking a door that already has a sign flips that sign's arrow.
+    const signed = TOOL_INFO[tool].sign ? existingSign(design, x, y) : undefined;
+    if (signed) {
+      const items = design.items.map((it) => (it.id === signed.id ? { ...it, swing: -it.swing as 1 | -1 } : it));
+      set({ design: { ...design, items }, notice: null });
+      return;
+    }
     const r = resolveDraft(level, design, tool, x, y, get().orientIdx);
     if (!r.relevant || !r.check.ok) return;
     set({ design: place(level, design, r.draft), notice: null });
@@ -315,6 +323,12 @@ function paintRamp(level: Level, x: number, y: number) {
   });
 }
 
+/** The one-way sign already hanging on the door at (x, y), if any. */
+function existingSign(design: Design, x: number, y: number) {
+  const door = doorAt(design, x, y);
+  return door ? signOn(design, door) : undefined;
+}
+
 export type Resolved = {
   draft: Draft;
   check: PlaceCheck;
@@ -337,7 +351,12 @@ export function resolveDraft(
 ): Resolved {
   if (ramp) return { draft: ramp, check: checkPlace(level, design, ramp), relevant: isEditable(level, x, y) };
   const base = snapSign(design, draftFor(tool, x, y, orientIdx));
-  if (TOOL_INFO[tool].sign) return { draft: base, check: checkPlace(level, design, base), relevant: !!doorAt(design, x, y) };
+  if (TOOL_INFO[tool].sign) {
+    // A door that already has a sign: the click will flip it, so preview the flipped arrow.
+    const signed = existingSign(design, x, y);
+    if (signed) return { draft: { ...signed, swing: -signed.swing as 1 | -1 }, check: { ok: true }, relevant: true };
+    return { draft: base, check: checkPlace(level, design, base), relevant: !!doorAt(design, x, y) };
+  }
   if (!isEditable(level, x, y)) return { draft: base, check: { ok: false, reason: '' }, relevant: false };
   const first = checkPlace(level, design, base);
   if (TOOL_INFO[tool].attach) return { draft: base, check: first, relevant: first.ok || !!eraseTarget(design, x, y) };

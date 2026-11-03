@@ -18,6 +18,9 @@ import {
   RACK_SPOON_FALL_MM,
   RACK_WATER_ML,
   RACK_WEIGHT_G,
+  RACK_MATERIAL_DATA,
+  RACK_PLATE_FACE_M2,
+  RACK_PLATE_PILES,
 } from './constants';
 import { PRINCIPLES, type Incident, type IncidentCode } from './failures';
 import type { Level } from './types';
@@ -188,4 +191,44 @@ export function rackIncidents(prev: Incident[], r: RackDesign, s: RackState, tic
     set(incident('RUSTED', tick, 'One month later: rust', 'Checked a month later: the mild steel frame has rusted where water sat on it, and stains the plates.'));
   }
   return list;
+}
+
+/** The numbers an engineer would look at while choosing parts. Facts about the design, not verdicts. */
+export type RackSheet = {
+  /** Share of the base that is openings (0..1). */
+  openArea: number;
+  surface: string;
+  opening: string;
+  /** How the plates sit, and how much plate surface is open to the air (m²). */
+  plates: string;
+  plateAirM2: number;
+  plateTotalM2: number;
+  material: (typeof RACK_MATERIAL_DATA)[RackMaterial];
+  /** Everything in the rack, wet, straight out of the wash (kg). */
+  wetLoadKg: number;
+  /** Where water goes once it leaves the utensils. */
+  waterPath: string;
+};
+
+export function rackSheet(level: Level, r: RackDesign): RackSheet {
+  const counts = level.rack!;
+  const openArea = RACK_OPEN_AREA[r.base][r.gap];
+  const plateTotalM2 = counts.plates * 2 * RACK_PLATE_FACE_M2;
+  const plateAirM2 = r.dividers ? plateTotalM2 : Math.min(counts.plates, RACK_PLATE_PILES) * RACK_PLATE_FACE_M2;
+  const wetG =
+    counts.plates * (RACK_WEIGHT_G.plate + RACK_WATER_ML.plate) +
+    counts.bowls * (RACK_WEIGHT_G.bowl + RACK_WATER_ML.bowl) +
+    counts.spoons * (RACK_WEIGHT_G.spoon + RACK_WATER_ML.spoon);
+  const below = r.dripTray ? 'drip tray' : 'counter';
+  return {
+    openArea,
+    surface: RACK_NAMES.base[r.base],
+    opening: r.base === 'tray' ? 'No openings' : `${r.gap} mm openings`,
+    plates: r.dividers ? `Upright, ${r.gap} mm apart` : `Flat, in ${Math.min(counts.plates, RACK_PLATE_PILES)} piles`,
+    plateAirM2,
+    plateTotalM2,
+    material: RACK_MATERIAL_DATA[r.material],
+    wetLoadKg: wetG / 1000,
+    waterPath: r.base === 'tray' ? 'Utensils → base (no way down)' : `Utensils → base → ${below}`,
+  };
 }

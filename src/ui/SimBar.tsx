@@ -44,17 +44,22 @@ export function SimBar({ level }: { level: Level }) {
             {s}×
           </button>
         ))}
-        <button className={`btn ghost small speed ${showHeat ? 'on' : ''}`} onClick={toggleHeat} title="Where people waited">
-          🔥 Heatmap
-        </button>
-        <button
-          className={`btn ghost small speed ${showGhost && hasBest ? 'on' : ''}`}
-          onClick={toggleGhost}
-          disabled={!hasBest}
-          title={hasBest ? 'Show faint people from your best run' : 'Pass this level once to race your best run'}
-        >
-          👻 Best run
-        </button>
+        {/* Heatmap and best-run ghosts show people; an object level (the Utensil Rack) has none. */}
+        {!level.rack && (
+          <>
+            <button className={`btn ghost small speed ${showHeat ? 'on' : ''}`} onClick={toggleHeat} title="Where people waited">
+              🔥 Heatmap
+            </button>
+            <button
+              className={`btn ghost small speed ${showGhost && hasBest ? 'on' : ''}`}
+              onClick={toggleGhost}
+              disabled={!hasBest}
+              title={hasBest ? 'Show faint people from your best run' : 'Pass this level once to race your best run'}
+            >
+              👻 Best run
+            </button>
+          </>
+        )}
         <button className="btn ghost small" onClick={backToDesign}>↺ Back to design</button>
       </div>
       <div className="sim-stats">

@@ -177,10 +177,43 @@ export function InteractionPlane({ level }: { level: Level }) {
     return () => window.removeEventListener('pointerup', stop);
   }, []);
 
+  // Height of whatever stands on each tile (walls, doors, raised ground), cached per design.
+  const heights = useRef<{ design: unknown; at: (x: number, y: number) => number } | null>(null);
+  const heightAt = (x: number, y: number) => {
+    const design = useStore.getState().design;
+    if (heights.current?.design !== design) {
+      const grid = buildGrid(level, design);
+      const terrain = terrainOf(level, design);
+      heights.current = {
+        design,
+        at: (tx, ty) => {
+          const cell = getCell(grid, tx, ty);
+          return Math.max(cell === 'wall' || cell === 'door' ? WALL_H : 0, surfaceY(terrain, tx, ty));
+        },
+      };
+    }
+    return heights.current.at(x, y);
+  };
+
+  /**
+   * The tile under the mouse. The camera looks down at an angle, so the floor point behind a wall is not the
+   * wall: walk down the ray from the top and take the first tile whose wall, door or ground reaches that height.
+   * Clicking the top or face of a wall (or a door) then picks that wall tile, not the floor behind it.
+   */
   const tileOf = (e: ThreeEvent<PointerEvent>): [number, number] | null => {
+    const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h;
+    const { origin, direction } = e.ray;
+    if (direction.y < -1e-6) {
+      for (let hy = WALL_H + 3; hy > 0.02; hy -= 0.05) {
+        const t = (hy - origin.y) / direction.y;
+        const x = Math.floor(origin.x + direction.x * t + w / 2);
+        const y = Math.floor(origin.z + direction.z * t + h / 2);
+        if (inside(x, y) && heightAt(x, y) >= hy) return [x, y];
+      }
+    }
     const x = Math.floor(e.point.x + w / 2);
     const y = Math.floor(e.point.z + h / 2);
-    return x >= 0 && y >= 0 && x < w && y < h ? [x, y] : null;
+    return inside(x, y) ? [x, y] : null;
   };
 
   const act = (mode: 'build' | 'erase', x: number, y: number) => {

@@ -330,7 +330,8 @@ export function RackScene({ level }: { level: Level }) {
             />
           );
         }
-        return <Spoon key={`s${i}`} u={u} pos={[2.2 + (i % 5) * 0.45, BASE_Y + 0.06, 0.7 + Math.floor(i / 5) * 1.1]} rot={[Math.PI / 2, 0, 0.3]} />;
+        // Lying flat side by side in the free front-right corner, handles pointing left, all inside the frame.
+        return <Spoon key={`s${i}`} u={u} pos={[4.15 - (i % 2) * 0.15, BASE_Y + 0.06, 0.25 + i * 0.22]} rot={[0, 0, Math.PI / 2]} />;
       })}
     </group>
   );

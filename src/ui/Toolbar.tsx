@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { TOOL_INFO, type BuildTool } from '../sim/design';
+import { eraseTarget, TOOL_INFO, type BuildTool } from '../sim/design';
 import type { Level, ToolId } from '../sim/types';
 import { RAMP_SLOPES } from '../sim/constants';
 import { orientationOf, rampDraft, resolveDraft, useStore } from '../store';
@@ -53,7 +53,8 @@ export function Toolbar({ level }: { level: Level }) {
     const r = isRamp
       ? resolveDraft(level, design, tool, hover[0], hover[1], orientIdx, rampDraft({ design, slopeIdx, rampDir }, hover[0], hover[1]))
       : resolveDraft(level, design, tool, hover[0], hover[1], orientIdx);
-    if (r.relevant && !r.check.ok) blocked = r.check.reason;
+    // Hovering something already built (e.g. the door you just placed) needs no warning: the red ghost says enough.
+    if (r.relevant && !r.check.ok && !eraseTarget(design, hover[0], hover[1])) blocked = r.check.reason;
   }
 
   return (

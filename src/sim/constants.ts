@@ -201,3 +201,21 @@ export const RACK_CUP_POOL_EVAP_ML_PER_MIN = 0.05;
 /** Dry weights (g) and what a thin aluminium frame can carry before it bends (g). */
 export const RACK_WEIGHT_G = { plate: 180, bowl: 120, spoon: 25 } as const;
 export const RACK_ALUMINIUM_LIMIT_G = 3500;
+
+// ---- Utensil Rack design sheet (shown to the player while building; the sim doesn't read these) ----
+
+/** A dinner plate is ~210 mm across: one face is π × 0.105² ≈ 0.035 m². */
+export const RACK_PLATE_FACE_M2 = Math.PI * 0.105 * 0.105;
+/** Plates lying flat sit in this many piles; only the top face of each pile meets the air. */
+export const RACK_PLATE_PILES = 4;
+/**
+ * Frame materials, approximate handbook values. Young's modulus (GPa) is how stiff the material itself is;
+ * a frame's stiffness also depends on its shape: plastic racks are moulded with thick ribs, metal racks are bent
+ * from thin wire, so a thin aluminium wire frame ends up the floppiest.
+ */
+export const RACK_MATERIAL_DATA = {
+  plastic: { label: 'Polypropylene', modulusGPa: 1.5, densityGcm3: 0.9, form: 'Moulded, thick ribs', frameStiffness: 'Medium', rustResistance: 'Does not rust' },
+  aluminium: { label: 'Aluminium', modulusGPa: 69, densityGcm3: 2.7, form: 'Thin wire, 4 mm', frameStiffness: 'Low', rustResistance: 'Good' },
+  stainless: { label: 'Stainless steel (304)', modulusGPa: 193, densityGcm3: 8.0, form: 'Thin wire, 4 mm', frameStiffness: 'High', rustResistance: 'Excellent' },
+  mildSteel: { label: 'Mild steel, painted', modulusGPa: 200, densityGcm3: 7.85, form: 'Thin wire, 4 mm', frameStiffness: 'High', rustResistance: 'Low' },
+} as const;
